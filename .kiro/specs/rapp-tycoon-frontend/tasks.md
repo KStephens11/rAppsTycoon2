@@ -6,11 +6,11 @@ This implementation plan breaks down the rApp Tycoon Frontend UI into atomic, <1
 
 ## Phase 1: Setup & Boilerplate
 
-- [-] 1.1 Initialize React project with Vite
+- [x] 1.1 Initialize React project with Vite
   - Create new Vite project with React template
   - _Requirements: 1.0_
 
-- [ ] 1.2 Install core dependencies
+- [x] 1.2 Install core dependencies
   - Install React, React Router, TypeScript, Axios, STOMP client
   - _Requirements: 1.0_
 
