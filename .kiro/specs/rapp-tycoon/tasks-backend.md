@@ -74,27 +74,27 @@
 
 ## Task 7: rApp Deployment and Lifecycle
 
-- [ ] 7.1 Implement `RappService.deploy(code, token, templateId, basestationId)` — validates ownership, deducts cost from player money, creates deployment in DEPLOYING status
-- [ ] 7.2 Implement `RappService.activate(deploymentId)` — transitions DEPLOYING → ACTIVE, applies impact to basestation metrics (called by tick engine after 1 tick)
-- [ ] 7.3 Implement `RappService.disable(code, token, deploymentId)` — validates ownership, removes impact from metrics, sets status to DISABLED
-- [ ] 7.4 Implement `RappService.tune(code, token, deploymentId, configuration)` — validates ownership, increments version, recalculates impact with new config
-- [ ] 7.5 Implement `RappService.rollback(code, token, deploymentId)` — validates version > 1, reverts to previous version/config, recalculates impact
-- [ ] 7.6 Implement State pattern for lifecycle transitions:
+- [x] 7.1 Implement `RappService.deploy(code, token, templateId, basestationId)` — validates ownership, deducts cost from player money, creates deployment in DEPLOYING status
+- [x] 7.2 Implement `RappService.activate(deploymentId)` — transitions DEPLOYING → ACTIVE, applies impact to basestation metrics (called by tick engine after 1 tick)
+- [x] 7.3 Implement `RappService.disable(code, token, deploymentId)` — validates ownership, removes impact from metrics, sets status to DISABLED
+- [x] 7.4 Implement `RappService.tune(code, token, deploymentId, configuration)` — validates ownership, increments version, recalculates impact with new config
+- [x] 7.5 Implement `RappService.rollback(code, token, deploymentId)` — validates version > 1, reverts to previous version/config, recalculates impact
+- [x] 7.6 Implement State pattern for lifecycle transitions:
   - Valid: DEPLOYING → ACTIVE, ACTIVE → DISABLED, ACTIVE → ROLLING_BACK, ROLLING_BACK → ACTIVE
   - Invalid transitions throw IllegalStateException
-- [ ] 7.7 Implement Command pattern:
+- [x] 7.7 Implement Command pattern:
   - `DeployCommand` — encapsulates deploy action with validation
   - `TuneCommand` — encapsulates tune action with validation
   - `DisableCommand` — encapsulates disable action with validation
   - `RollbackCommand` — encapsulates rollback action with validation
-- [ ] 7.8 Implement conflict detection: check for conflicting rApp pairs on same basestation (Energy Saver + Capacity Optimiser, Fault Predictor + Alarm Noise Reducer, Traffic Balancer + Energy Saver)
-- [ ] 7.9 Implement side-effect application when conflicts detected (per GAME_RULES.md penalties)
-- [ ] 7.10 Implement `RappController` with endpoints:
+- [x] 7.8 Implement conflict detection: check for conflicting rApp pairs on same basestation (Energy Saver + Capacity Optimiser, Fault Predictor + Alarm Noise Reducer, Traffic Balancer + Energy Saver)
+- [x] 7.9 Implement side-effect application when conflicts detected (per GAME_RULES.md penalties)
+- [x] 7.10 Implement `RappController` with endpoints:
   - `POST /api/sessions/{code}/rapps/deploy`
   - `PUT /api/sessions/{code}/rapps/{id}/tune`
   - `PUT /api/sessions/{code}/rapps/{id}/disable`
   - `PUT /api/sessions/{code}/rapps/{id}/rollback`
-- [ ] 7.11 Implement DTOs: `DeployRequest`, `TuneRequest`, `DeploymentResponse`
+- [x] 7.11 Implement DTOs: `DeployRequest`, `TuneRequest`, `DeploymentResponse`
 
 ## Task 8: Event System
 
