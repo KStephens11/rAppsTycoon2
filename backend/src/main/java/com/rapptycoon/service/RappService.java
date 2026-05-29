@@ -112,6 +112,11 @@ public class RappService {
         RappTemplate template = rappTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new EntityNotFoundException("RappTemplate not found with id: " + templateId));
 
+        // Validate sufficient funds
+        if (player.getScoreMoney().compareTo(template.getCost()) < 0) {
+            throw new InvalidStateException("Insufficient funds to deploy rApp (cost: " + template.getCost() + ", available: " + player.getScoreMoney() + ")");
+        }
+
         // Deduct cost from player money
         player.setScoreMoney(player.getScoreMoney().subtract(template.getCost()));
         playerRepository.save(player);
@@ -186,6 +191,9 @@ public class RappService {
 
         Basestation updatedBs = basestationService.updateMetrics(deployment.getBasestationId(), negatedImpact);
 
+        // Reverse any conflict penalties that involved this rApp
+        removeConflictPenalties(deployment, template.getName());
+
         deployment.setStatus(DeploymentStatus.DISABLED);
         deployment = rappDeploymentRepository.save(deployment);
 
@@ -223,8 +231,15 @@ public class RappService {
         // Store previous config for rollback
         deployment.setPreviousConfiguration(deployment.getConfiguration());
 
+        // Validate aggressiveness value
+        Aggressiveness newAggressiveness;
+        try {
+            newAggressiveness = Aggressiveness.valueOf(aggressivenessStr);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidStateException("Invalid aggressiveness value: " + aggressivenessStr + ". Must be LOW, MODERATE, or HIGH");
+        }
+
         // Update configuration
-        Aggressiveness newAggressiveness = Aggressiveness.valueOf(aggressivenessStr);
         String newConfig = String.format("{\"threshold\":%d,\"aggressiveness\":\"%s\"}", threshold, aggressivenessStr);
         deployment.setConfiguration(newConfig);
         deployment.setVersion(deployment.getVersion() + 1);
@@ -291,6 +306,33 @@ public class RappService {
 
         MetricsDto metricsDto = toMetricsDto(updatedBs);
         return toDeploymentResponse(deployment, template.getName(), metricsDto);
+    }
+
+    /**
+     * Removes conflict penalties when a rApp is disabled.
+     * Checks all remaining ACTIVE deployments on the same basestation for conflicts with the disabled rApp.
+     */
+    private void removeConflictPenalties(RappDeployment disabledDeployment, String disabledRappName) {
+        List<RappDeployment> activeDeployments = rappDeploymentRepository
+                .findByBasestationIdAndStatus(disabledDeployment.getBasestationId(), DeploymentStatus.ACTIVE);
+
+        for (RappDeployment existing : activeDeployments) {
+            if (existing.getId().equals(disabledDeployment.getId())) {
+                continue;
+            }
+            RappTemplate existingTemplate = rappTemplateRepository.findById(existing.getTemplateId())
+                    .orElse(null);
+            if (existingTemplate == null) {
+                continue;
+            }
+
+            String existingName = existingTemplate.getName();
+            for (ConflictRule rule : CONFLICT_RULES) {
+                if (rule.matches(disabledRappName, existingName)) {
+                    basestationService.updateMetrics(disabledDeployment.getBasestationId(), negateDeltas(rule.penalty()));
+                }
+            }
+        }
     }
 
     /**

@@ -168,8 +168,13 @@ public class GameSessionService {
     }
 
     @Transactional(readOnly = true)
-    public SessionResponse getSession(String code) {
+    public SessionResponse getSession(String code, String token) {
+        Player player = playerRepository.findBySessionToken(token)
+                .orElseThrow(() -> new UnauthorizedException("Invalid session token"));
         GameSession session = findSessionByCode(code);
+        if (!player.getSessionId().equals(session.getId())) {
+            throw new ForbiddenException("Player is not a member of this session");
+        }
         List<Player> players = playerRepository.findBySessionId(session.getId());
         return buildSessionResponse(session, players);
     }

@@ -47,7 +47,7 @@ public class GameSessionController {
         if (token == null || token.isBlank()) {
             throw new UnauthorizedException("Missing session token");
         }
-        SessionResponse response = gameSessionService.getSession(code);
+        SessionResponse response = gameSessionService.getSession(code, token);
         return ResponseEntity.ok(response);
     }
 }

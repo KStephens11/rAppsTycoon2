@@ -227,7 +227,7 @@ class GameSessionControllerTest {
                     List.of(new PlayerDto(1L, "Host", null, true, true))
             );
 
-            when(gameSessionService.getSession("ABCD1234")).thenReturn(sessionResponse);
+            when(gameSessionService.getSession("ABCD1234", "validtoken123")).thenReturn(sessionResponse);
 
             mockMvc.perform(get("/api/sessions/ABCD1234")
                             .header("X-Session-Token", "validtoken123"))
@@ -247,7 +247,7 @@ class GameSessionControllerTest {
         @Test
         @DisplayName("returns 404 when session not found")
         void returns404WhenSessionNotFound() throws Exception {
-            when(gameSessionService.getSession("INVALID1"))
+            when(gameSessionService.getSession("INVALID1", "validtoken123"))
                     .thenThrow(new SessionNotFoundException("INVALID1"));
 
             mockMvc.perform(get("/api/sessions/INVALID1")

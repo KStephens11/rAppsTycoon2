@@ -2,7 +2,10 @@ package com.rapptycoon.controller;
 
 import com.rapptycoon.dto.*;
 import com.rapptycoon.exception.UnauthorizedException;
+import com.rapptycoon.model.GameSession;
+import com.rapptycoon.model.GameSessionState;
 import com.rapptycoon.model.Player;
+import com.rapptycoon.repository.GameSessionRepository;
 import com.rapptycoon.service.BasestationService;
 import com.rapptycoon.service.PlayerService;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -33,6 +37,9 @@ class BasestationControllerTest {
 
     @MockitoBean
     private PlayerService playerService;
+
+    @MockitoBean
+    private GameSessionRepository gameSessionRepository;
 
     @Test
     @DisplayName("GET /api/sessions/{code}/basestations returns 200 with valid token")
@@ -68,6 +75,9 @@ class BasestationControllerTest {
         );
 
         when(playerService.validateToken("valid-token-123")).thenReturn(player);
+        when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(
+                GameSession.builder().id(1L).sessionCode("ABCD1234").state(GameSessionState.ACTIVE).maxPlayers(6).build()
+        ));
         when(basestationService.getPlayerBasestations(1L)).thenReturn(List.of(bsState));
 
         mockMvc.perform(get("/api/sessions/ABCD1234/basestations")
