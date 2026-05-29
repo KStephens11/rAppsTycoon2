@@ -112,15 +112,15 @@
 
 ## Task 9: Scoring and Leaderboard
 
-- [ ] 9.1 Implement `ScoreService.calculateCompositeScore(playerId)`:
+- [x] 9.1 Implement `ScoreService.calculateCompositeScore(playerId)`:
   - money × 0.30 + customerSatisfaction × 0.35 + networkStability × 0.35
   - customerSatisfaction = average customerExperience across all player basestations
   - networkStability = average of (health + automationReliability + slaCompliance) / 3 across all basestations
-- [ ] 9.2 Implement `ScoreService.recalculateAllScores(sessionId)` — recalculates scores for all players in session
-- [ ] 9.3 Implement `ScoreService.getLeaderboard(sessionCode)` — returns players sorted by composite score descending
-- [ ] 9.4 Implement `ScoreService.determineWinner(sessionCode)` — returns player with highest score, applies tiebreakers (satisfaction > stability > money)
-- [ ] 9.5 Implement `LeaderboardController` with endpoint: `GET /api/sessions/{code}/leaderboard`
-- [ ] 9.6 Implement DTOs: `LeaderboardResponse`, `LeaderboardEntryDto`, `ScoreDto`
+- [x] 9.2 Implement `ScoreService.recalculateAllScores(sessionId)` — recalculates scores for all players in session
+- [x] 9.3 Implement `ScoreService.getLeaderboard(sessionCode)` — returns players sorted by composite score descending
+- [x] 9.4 Implement `ScoreService.determineWinner(sessionCode)` — returns player with highest score, applies tiebreakers (satisfaction > stability > money)
+- [x] 9.5 Implement `LeaderboardController` with endpoint: `GET /api/sessions/{code}/leaderboard`
+- [x] 9.6 Implement DTOs: `LeaderboardResponse`, `LeaderboardEntryDto`, `ScoreDto`
 
 ## Task 10: Game Tick Engine
 
