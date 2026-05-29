@@ -14,7 +14,7 @@ This implementation plan breaks down the rApp Tycoon Frontend UI into atomic, <1
   - Install React, React Router, TypeScript, Axios, STOMP client
   - _Requirements: 1.0_
 
-- [ ] 1.3 Install UI and visualization libraries
+- [x] 1.3 Install UI and visualization libraries
   - Install styled-components, Three.js, Recharts
   - _Requirements: 4.0, 6.0_
 
