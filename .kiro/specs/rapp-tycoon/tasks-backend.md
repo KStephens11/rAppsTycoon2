@@ -41,11 +41,11 @@
 
 ## Task 4: Player Management
 
-- [~] 4.1 Implement `PlayerService.generateToken()` — creates unique 64-char session token
-- [~] 4.2 Implement `PlayerService.validateToken(token)` — looks up player by token, returns player or throws UnauthorizedException
-- [~] 4.3 Implement `PlayerService.disconnect(playerId)` — marks player as disconnected
-- [~] 4.4 Implement `PlayerService.reconnect(token)` — restores full game state from database (basestations, deployed rApps, active events, scores)
-- [~] 4.5 Implement `PlayerService.getPlayersBySession(sessionId)` — returns all players in a session
+- [x] 4.1 Implement `PlayerService.generateToken()` — creates unique 64-char session token
+- [x] 4.2 Implement `PlayerService.validateToken(token)` — looks up player by token, returns player or throws UnauthorizedException
+- [x] 4.3 Implement `PlayerService.disconnect(playerId)` — marks player as disconnected
+- [x] 4.4 Implement `PlayerService.reconnect(token)` — restores full game state from database (basestations, deployed rApps, active events, scores)
+- [x] 4.5 Implement `PlayerService.getPlayersBySession(sessionId)` — returns all players in a session
 
 ## Task 5: Basestation Management
 
