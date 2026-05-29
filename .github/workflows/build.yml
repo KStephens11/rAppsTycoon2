@@ -3,10 +3,6 @@ on:
   push:
     branches:
       - development
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - development
 
 jobs:
   build:
@@ -40,7 +36,7 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Build and analyze (push)
+      - name: Build and analyze
         if: github.event_name == 'push'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -50,18 +46,3 @@ jobs:
           -Dsonar.projectKey=yuhangzzzz_rAppsTycoon2
           -Dsonar.organization=yuhangzzzz
           -Dsonar.host.url=https://sonarcloud.io
-
-      - name: Build and analyze (pull request)
-        if: github.event_name == 'pull_request'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -Dsonar.projectKey=yuhangzzzz_rAppsTycoon2
-          -Dsonar.organization=yuhangzzzz
-          -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
-          -Dsonar.pullrequest.branch=${{ github.head_ref }}
-          -Dsonar.pullrequest.base=${{ github.base_ref }}
-          -Dsonar.pullrequest.provider=GitHub
