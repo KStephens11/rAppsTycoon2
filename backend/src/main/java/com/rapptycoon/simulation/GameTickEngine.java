@@ -1,6 +1,8 @@
 package com.rapptycoon.simulation;
 
 import com.rapptycoon.config.GameProperties;
+import com.rapptycoon.dto.LeaderboardResponse;
+import com.rapptycoon.dto.MetricsDto;
 import com.rapptycoon.factory.RappBehaviour;
 import com.rapptycoon.factory.RappBehaviourRegistry;
 import com.rapptycoon.model.*;
@@ -9,6 +11,9 @@ import com.rapptycoon.service.BasestationService;
 import com.rapptycoon.service.EventService;
 import com.rapptycoon.service.GameSessionService;
 import com.rapptycoon.service.ScoreService;
+import com.rapptycoon.websocket.MessageType;
+import com.rapptycoon.websocket.WebSocketBroadcaster;
+import com.rapptycoon.websocket.WebSocketMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,6 +42,7 @@ public class GameTickEngine {
     private final ScoreService scoreService;
     private final GameSessionService gameSessionService;
     private final GameProperties gameProperties;
+    private final WebSocketBroadcaster broadcaster;
 
     public GameTickEngine(GameSessionRepository gameSessionRepository,
                           RappDeploymentRepository rappDeploymentRepository,
@@ -49,7 +55,8 @@ public class GameTickEngine {
                           EventService eventService,
                           ScoreService scoreService,
                           GameSessionService gameSessionService,
-                          GameProperties gameProperties) {
+                          GameProperties gameProperties,
+                          WebSocketBroadcaster broadcaster) {
         this.gameSessionRepository = gameSessionRepository;
         this.rappDeploymentRepository = rappDeploymentRepository;
         this.gameEventRepository = gameEventRepository;
@@ -62,6 +69,7 @@ public class GameTickEngine {
         this.scoreService = scoreService;
         this.gameSessionService = gameSessionService;
         this.gameProperties = gameProperties;
+        this.broadcaster = broadcaster;
     }
 
     @Scheduled(fixedDelayString = "${game.tick.interval}")
@@ -101,13 +109,18 @@ public class GameTickEngine {
         // 7. Recalculate all player scores
         scoreService.recalculateAllScores(session.getId());
 
-        // 8. Increment tick counter
+        // 8. Broadcast updates via WebSocket
+        broadcastTickUpdates(session);
+
+        // 9. Increment tick counter
         session.setCurrentTick(currentTick + 1);
         gameSessionRepository.save(session);
 
-        // 9. Check game end condition
+        // 10. Check game end condition
         if (session.getCurrentTick() >= gameProperties.getTick().getTotal()) {
             gameSessionService.endSession(session.getSessionCode());
+            broadcaster.broadcastToSession(session.getSessionCode(),
+                    WebSocketMessage.of(MessageType.GAME_ENDED, scoreService.getLeaderboard(session.getSessionCode())));
         }
     }
 
@@ -204,6 +217,39 @@ public class GameTickEngine {
             if (event.getEscalationLevel() == gameProperties.getEscalation().getMaxLevel()) {
                 eventService.checkAutoResolve(event.getId());
             }
+        }
+    }
+
+    /**
+     * Broadcasts leaderboard and metrics updates to all connected players via WebSocket.
+     */
+    private void broadcastTickUpdates(GameSession session) {
+        try {
+            // Broadcast leaderboard update
+            LeaderboardResponse leaderboard = scoreService.getLeaderboard(session.getSessionCode());
+            broadcaster.broadcastLeaderboard(session.getSessionCode(),
+                    WebSocketMessage.of(MessageType.LEADERBOARD_UPDATED, leaderboard));
+
+            // Send metrics updates to each player
+            List<Player> players = playerRepository.findBySessionId(session.getId());
+            for (Player player : players) {
+                List<Basestation> basestations = basestationRepository.findByPlayerId(player.getId());
+                for (Basestation bs : basestations) {
+                    MetricsDto metrics = new MetricsDto(
+                            bs.getHealth(), bs.getCustomerExperience(), bs.getCost(),
+                            bs.getEnergyEfficiency(), bs.getAutomationReliability(), bs.getSlaCompliance()
+                    );
+                    var payload = java.util.Map.of(
+                            "basestationId", bs.getId(),
+                            "basestationName", bs.getName(),
+                            "metrics", metrics
+                    );
+                    broadcaster.sendMetricsUpdate(session.getSessionCode(), player.getId(),
+                            WebSocketMessage.of(MessageType.METRICS_UPDATED, payload));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error broadcasting tick updates for session {}: {}", session.getSessionCode(), e.getMessage());
         }
     }
 

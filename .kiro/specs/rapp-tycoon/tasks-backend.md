@@ -148,21 +148,21 @@
 
 ## Task 11: WebSocket Real-Time Communication
 
-- [ ] 11.1 Configure Spring WebSocket with STOMP protocol (`/ws/game` endpoint)
-- [ ] 11.2 Implement WebSocket authentication interceptor (validate X-Session-Token on connect)
-- [ ] 11.3 Implement WebSocket session registry (track connected players per game session)
-- [ ] 11.4 Implement server-to-client message types:
+- [x] 11.1 Configure Spring WebSocket with STOMP protocol (`/ws/game` endpoint)
+- [x] 11.2 Implement WebSocket authentication interceptor (validate X-Session-Token on connect)
+- [x] 11.3 Implement WebSocket session registry (track connected players per game session)
+- [x] 11.4 Implement server-to-client message types:
   - `GAME_STARTED` — broadcast to all players in session
   - `GAME_ENDED` — broadcast with final leaderboard and winner
   - `EVENT_OCCURRED` — targeted to affected player
   - `METRICS_UPDATED` — targeted to player whose basestation changed
   - `LEADERBOARD_UPDATED` — broadcast to all players in session
   - `RAPP_STATUS_CHANGED` — targeted to player whose rApp changed
-- [ ] 11.5 Implement client-to-server `PLAYER_ACTION` message handling (validate, route to appropriate service)
-- [ ] 11.6 Implement `ACTION_ERROR` response message for invalid WebSocket actions
-- [ ] 11.7 Implement broadcast helper: `WebSocketBroadcaster.broadcastToSession(code, message)`
-- [ ] 11.8 Implement targeted helper: `WebSocketBroadcaster.sendToPlayer(playerId, message)`
-- [ ] 11.9 Implement disconnect handling (mark player as disconnected, allow reconnection)
+- [x] 11.5 Implement client-to-server `PLAYER_ACTION` message handling (validate, route to appropriate service)
+- [x] 11.6 Implement `ACTION_ERROR` response message for invalid WebSocket actions
+- [x] 11.7 Implement broadcast helper: `WebSocketBroadcaster.broadcastToSession(code, message)`
+- [x] 11.8 Implement targeted helper: `WebSocketBroadcaster.sendToPlayer(playerId, message)`
+- [x] 11.9 Implement disconnect handling (mark player as disconnected, allow reconnection)
 
 ## Task 12: Security and Access Control
 

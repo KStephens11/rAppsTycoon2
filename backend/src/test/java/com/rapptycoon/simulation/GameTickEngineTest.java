@@ -57,6 +57,8 @@ class GameTickEngineTest {
     private GameSessionService gameSessionService;
     @Mock
     private GameProperties gameProperties;
+    @Mock
+    private com.rapptycoon.websocket.WebSocketBroadcaster broadcaster;
 
     @InjectMocks
     private GameTickEngine gameTickEngine;
