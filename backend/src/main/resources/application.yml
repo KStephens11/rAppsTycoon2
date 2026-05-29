@@ -65,6 +65,10 @@ game:
     deployment-ticks: 1
     resolve-ticks: 1
 
+# Internal API
+internal:
+  api-key: rapp-internal-secret-key
+
 # Logging
 logging:
   level:

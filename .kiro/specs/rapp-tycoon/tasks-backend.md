@@ -98,17 +98,17 @@
 
 ## Task 8: Event System
 
-- [ ] 8.1 Implement `EventService.createEvent(code, basestationId, eventType, severity, description, impact)` — creates GameEvent, notifies affected player via WebSocket
-- [ ] 8.2 Implement `EventService.resolveEvent(eventId)` — marks event as resolved, sets resolvedAt timestamp, stops per-tick impact
-- [ ] 8.3 Implement `EventService.escalateEvent(eventId)` — increments escalation level (max 3), applies escalation multiplier to impact
-- [ ] 8.4 Implement event resolution detection: when an effective rApp is deployed on an affected basestation, mark event for resolution after 1 tick
-- [ ] 8.5 Implement event auto-resolve: events at escalation level 3 for 5+ ticks auto-resolve with permanent -10 metric damage
-- [ ] 8.6 Implement event-rApp effectiveness mapping (per GAME_RULES.md resolution table)
-- [ ] 8.7 Implement internal API controller with endpoints:
+- [x] 8.1 Implement `EventService.createEvent(code, basestationId, eventType, severity, description, impact)` — creates GameEvent, notifies affected player via WebSocket
+- [x] 8.2 Implement `EventService.resolveEvent(eventId)` — marks event as resolved, sets resolvedAt timestamp, stops per-tick impact
+- [x] 8.3 Implement `EventService.escalateEvent(eventId)` — increments escalation level (max 3), applies escalation multiplier to impact
+- [x] 8.4 Implement event resolution detection: when an effective rApp is deployed on an affected basestation, mark event for resolution after 1 tick
+- [x] 8.5 Implement event auto-resolve: events at escalation level 3 for 5+ ticks auto-resolve with permanent -10 metric damage
+- [x] 8.6 Implement event-rApp effectiveness mapping (per GAME_RULES.md resolution table)
+- [x] 8.7 Implement internal API controller with endpoints:
   - `POST /api/internal/sessions/{code}/events`
   - `GET /api/internal/sessions/active`
-- [ ] 8.8 Implement internal API key validation filter (X-Internal-Key header)
-- [ ] 8.9 Implement DTOs: `CreateEventRequest`, `EventResponse`, `ActiveSessionsResponse`
+- [x] 8.8 Implement internal API key validation filter (X-Internal-Key header)
+- [x] 8.9 Implement DTOs: `CreateEventRequest`, `EventResponse`, `ActiveSessionsResponse`
 
 ## Task 9: Scoring and Leaderboard
 
