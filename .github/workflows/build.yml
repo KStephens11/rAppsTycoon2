@@ -2,7 +2,7 @@ name: SonarQube
 on:
   push:
     branches:
-      - main
+      - [main, setup-sonarQube]
   pull_request:
     types: [opened, synchronize, reopened]
 
