@@ -159,6 +159,9 @@ CREATE TABLE game_event (
 - `PUT /api/sessions/{code}/rapps/{id}/disable` — Disable an rApp
 - `PUT /api/sessions/{code}/rapps/{id}/rollback` — Roll back an rApp
 
+#### Leaderboard
+- `GET /api/sessions/{code}/leaderboard` — Get current leaderboard rankings
+
 #### Catalogue
 - `GET /api/rapps/catalogue` — Get available rApps
 
@@ -250,6 +253,33 @@ event_generator/
 ```
 
 The Event Generator polls for active sessions and generates events based on configurable probabilities and intervals. Events are pushed to the Backend via REST API.
+
+## Game Mechanics
+
+### Tick Engine
+- Default tick interval: 5 seconds
+- Default game duration: 60 ticks (5 minutes)
+- Each tick: apply rApp impacts, apply event impacts, escalate unresolved events, recalculate scores, check end condition
+
+### Event Resolution
+Events are resolved by deploying an effective rApp to the affected basestation:
+- Power Outage → Energy Saver, Fault Predictor
+- Traffic Spike → Capacity Optimiser, Traffic Balancer
+- Hardware Failure → Fault Predictor, Config Drift Detector
+- SLA Breach → SLA Guardian, Capacity Optimiser
+- Interference → Traffic Balancer, Alarm Noise Reducer
+- Capacity Overflow → Capacity Optimiser, Traffic Balancer
+
+### rApp Conflict Detection
+Certain rApp combinations on the same basestation produce side effects:
+- Energy Saver + Capacity Optimiser → resource contention penalty
+- Fault Predictor + Alarm Noise Reducer → alarm suppression penalty
+- Traffic Balancer + Energy Saver → handover conflict penalty
+
+The `RappService` checks for conflicts on each deployment and generates side-effect events when detected.
+
+### Currency
+All monetary values are in euros (€). Starting money: €1,000.
 
 ## Kubernetes Deployment
 
