@@ -27,17 +27,17 @@
 
 ## Task 3: Game Session Lifecycle
 
-- [~] 3.1 Implement `GameSessionService.createSession(hostName)` — generates 8-char session code, creates session in LOBBY state, creates host player with token
-- [~] 3.2 Implement `GameSessionService.joinSession(code, displayName)` — validates session exists, is in LOBBY state, has fewer than 6 players; creates player with token
-- [~] 3.3 Implement `GameSessionService.startSession(code, token)` — validates host, verifies at least 2 players, transitions to ACTIVE, assigns basestations, starts tick engine
-- [~] 3.4 Implement `GameSessionService.endSession(code)` — transitions to COMPLETED, calculates final scores, determines winner
-- [~] 3.5 Implement session code generation (unique 8-character alphanumeric, collision-resistant)
-- [~] 3.6 Implement `GameSessionController` with endpoints:
+- [x] 3.1 Implement `GameSessionService.createSession(hostName)` — generates 8-char session code, creates session in LOBBY state, creates host player with token
+- [x] 3.2 Implement `GameSessionService.joinSession(code, displayName)` — validates session exists, is in LOBBY state, has fewer than 6 players; creates player with token
+- [x] 3.3 Implement `GameSessionService.startSession(code, token)` — validates host, verifies at least 2 players, transitions to ACTIVE, assigns basestations, starts tick engine
+- [x] 3.4 Implement `GameSessionService.endSession(code)` — transitions to COMPLETED, calculates final scores, determines winner
+- [x] 3.5 Implement session code generation (unique 8-character alphanumeric, collision-resistant)
+- [x] 3.6 Implement `GameSessionController` with endpoints:
   - `POST /api/sessions` (create)
   - `POST /api/sessions/{code}/join`
   - `POST /api/sessions/{code}/start`
   - `GET /api/sessions/{code}`
-- [~] 3.7 Implement DTOs: `CreateSessionRequest`, `JoinSessionRequest`, `SessionResponse`, `JoinResponse`
+- [x] 3.7 Implement DTOs: `CreateSessionRequest`, `JoinSessionRequest`, `SessionResponse`, `JoinResponse`
 
 ## Task 4: Player Management
 
