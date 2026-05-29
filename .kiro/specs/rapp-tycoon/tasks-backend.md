@@ -124,8 +124,8 @@
 
 ## Task 10: Game Tick Engine
 
-- [ ] 10.1 Implement `GameTickEngine` as a scheduled service (configurable interval from application.yml, default 5000ms)
-- [ ] 10.2 Implement tick processing per active session:
+- [x] 10.1 Implement `GameTickEngine` as a scheduled service (configurable interval from application.yml, default 5000ms)
+- [x] 10.2 Implement tick processing per active session:
   1. Activate DEPLOYING rApps that have waited 1 tick
   2. Apply active rApp impacts to basestation metrics (using RappBehaviour strategy)
   3. Apply active event impacts to basestation metrics (with escalation multiplier)
@@ -136,15 +136,15 @@
   8. Recalculate all player scores
   9. Increment tick counter, check game end condition (tick >= 60)
   10. Broadcast updates via WebSocket
-- [ ] 10.3 Implement metric clamping: percentage metrics clamped to [0.00, 100.00], cost has no upper limit
-- [ ] 10.4 Implement escalation rate logic:
+- [x] 10.3 Implement metric clamping: percentage metrics clamped to [0.00, 100.00], cost has no upper limit
+- [x] 10.4 Implement escalation rate logic:
   - LOW: +1 level per 3 ticks
   - MEDIUM: +1 level per 2 ticks
   - HIGH: +1 level per tick
   - CRITICAL: +1 level per tick
-- [ ] 10.5 Implement escalation impact multiplier: Level 0 = ×1.0, Level 1 = ×1.5, Level 2 = ×2.0, Level 3 = ×3.0
-- [ ] 10.6 Implement game end condition: transition session to COMPLETED when tick count reaches configured total (default 60)
-- [ ] 10.7 Implement tick counter persistence (store current tick in game_session or in-memory per session)
+- [x] 10.5 Implement escalation impact multiplier: Level 0 = ×1.0, Level 1 = ×1.5, Level 2 = ×2.0, Level 3 = ×3.0
+- [x] 10.6 Implement game end condition: transition session to COMPLETED when tick count reaches configured total (default 60)
+- [x] 10.7 Implement tick counter persistence (store current tick in game_session or in-memory per session)
 
 ## Task 11: WebSocket Real-Time Communication
 
