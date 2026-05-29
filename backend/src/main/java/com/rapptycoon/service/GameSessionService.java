@@ -26,14 +26,17 @@ public class GameSessionService {
     private final GameSessionRepository gameSessionRepository;
     private final PlayerRepository playerRepository;
     private final GameProperties gameProperties;
+    private final BasestationService basestationService;
     private final SecureRandom secureRandom;
 
     public GameSessionService(GameSessionRepository gameSessionRepository,
                               PlayerRepository playerRepository,
-                              GameProperties gameProperties) {
+                              GameProperties gameProperties,
+                              BasestationService basestationService) {
         this.gameSessionRepository = gameSessionRepository;
         this.playerRepository = playerRepository;
         this.gameProperties = gameProperties;
+        this.basestationService = basestationService;
         this.secureRandom = new SecureRandom();
     }
 
@@ -141,6 +144,9 @@ public class GameSessionService {
         session.setState(GameSessionState.ACTIVE);
         session.setStartedAt(LocalDateTime.now());
         session = gameSessionRepository.save(session);
+
+        // Assign basestations to all players
+        basestationService.assignBasestations(session.getId());
 
         return buildSessionResponse(session, players);
     }

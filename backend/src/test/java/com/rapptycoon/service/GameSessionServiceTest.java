@@ -39,6 +39,9 @@ class GameSessionServiceTest {
     @Mock
     private PlayerRepository playerRepository;
 
+    @Mock
+    private BasestationService basestationService;
+
     private GameProperties gameProperties;
     private GameSessionService gameSessionService;
 
@@ -50,7 +53,7 @@ class GameSessionServiceTest {
         players.setMax(6);
         gameProperties.setPlayers(players);
 
-        gameSessionService = new GameSessionService(gameSessionRepository, playerRepository, gameProperties);
+        gameSessionService = new GameSessionService(gameSessionRepository, playerRepository, gameProperties, basestationService);
     }
 
     @Nested

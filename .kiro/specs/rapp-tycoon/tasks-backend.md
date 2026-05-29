@@ -49,11 +49,11 @@
 
 ## Task 5: Basestation Management
 
-- [~] 5.1 Implement `BasestationService.assignBasestations(sessionId)` — assigns 3 basestations per player with unique names and positions
-- [~] 5.2 Implement `BasestationService.getPlayerBasestations(playerId)` — returns basestations with current metrics, deployed rApps, and active events
-- [~] 5.3 Implement `BasestationService.updateMetrics(basestationId, metricDeltas)` — applies metric changes with clamping (0-100 for percentages, no negative)
-- [~] 5.4 Implement `BasestationController` with endpoint: `GET /api/sessions/{code}/basestations`
-- [~] 5.5 Implement DTOs: `BasestationResponse`, `MetricsDto`, `DeployedRappDto`, `ActiveEventDto`
+- [x] 5.1 Implement `BasestationService.assignBasestations(sessionId)` — assigns 3 basestations per player with unique names and positions
+- [x] 5.2 Implement `BasestationService.getPlayerBasestations(playerId)` — returns basestations with current metrics, deployed rApps, and active events
+- [x] 5.3 Implement `BasestationService.updateMetrics(basestationId, metricDeltas)` — applies metric changes with clamping (0-100 for percentages, no negative)
+- [x] 5.4 Implement `BasestationController` with endpoint: `GET /api/sessions/{code}/basestations`
+- [x] 5.5 Implement DTOs: `BasestationResponse`, `MetricsDto`, `DeployedRappDto`, `ActiveEventDto`
 
 ## Task 6: rApp Catalogue and Factory
 
