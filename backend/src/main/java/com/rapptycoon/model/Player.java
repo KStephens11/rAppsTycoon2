@@ -48,4 +48,7 @@ public class Player {
     @Column(name = "connected")
     @Builder.Default
     private boolean connected = false;
+
+    @Version
+    private Long version;
 }

@@ -26,14 +26,17 @@ public class GameSessionService {
     private final GameSessionRepository gameSessionRepository;
     private final PlayerRepository playerRepository;
     private final GameProperties gameProperties;
+    private final BasestationService basestationService;
     private final SecureRandom secureRandom;
 
     public GameSessionService(GameSessionRepository gameSessionRepository,
                               PlayerRepository playerRepository,
-                              GameProperties gameProperties) {
+                              GameProperties gameProperties,
+                              BasestationService basestationService) {
         this.gameSessionRepository = gameSessionRepository;
         this.playerRepository = playerRepository;
         this.gameProperties = gameProperties;
+        this.basestationService = basestationService;
         this.secureRandom = new SecureRandom();
     }
 
@@ -142,6 +145,9 @@ public class GameSessionService {
         session.setStartedAt(LocalDateTime.now());
         session = gameSessionRepository.save(session);
 
+        // Assign basestations to all players
+        basestationService.assignBasestations(session.getId());
+
         return buildSessionResponse(session, players);
     }
 
@@ -162,8 +168,13 @@ public class GameSessionService {
     }
 
     @Transactional(readOnly = true)
-    public SessionResponse getSession(String code) {
+    public SessionResponse getSession(String code, String token) {
+        Player player = playerRepository.findBySessionToken(token)
+                .orElseThrow(() -> new UnauthorizedException("Invalid session token"));
         GameSession session = findSessionByCode(code);
+        if (!player.getSessionId().equals(session.getId())) {
+            throw new ForbiddenException("Player is not a member of this session");
+        }
         List<Player> players = playerRepository.findBySessionId(session.getId());
         return buildSessionResponse(session, players);
     }

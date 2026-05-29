@@ -55,4 +55,7 @@ public class Basestation {
     @Column(name = "sla_compliance", precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal slaCompliance = new BigDecimal("100.00");
+
+    @Version
+    private Long version;
 }

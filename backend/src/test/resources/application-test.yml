@@ -39,3 +39,7 @@ game:
   rapp:
     deployment-ticks: 1
     resolve-ticks: 1
+
+# Internal API
+internal:
+  api-key: test-internal-key

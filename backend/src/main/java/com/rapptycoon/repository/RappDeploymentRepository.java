@@ -13,4 +13,6 @@ public interface RappDeploymentRepository extends JpaRepository<RappDeployment, 
     List<RappDeployment> findByBasestationId(Long basestationId);
 
     List<RappDeployment> findByPlayerIdAndStatus(Long playerId, DeploymentStatus status);
+
+    List<RappDeployment> findByBasestationIdAndStatus(Long basestationId, DeploymentStatus status);
 }

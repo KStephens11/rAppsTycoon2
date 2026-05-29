@@ -40,6 +40,9 @@ public class RappDeployment {
     @Column(name = "configuration", columnDefinition = "JSON")
     private String configuration;
 
+    @Column(name = "previous_configuration", columnDefinition = "JSON")
+    private String previousConfiguration;
+
     @Column(name = "deployed_at")
     private LocalDateTime deployedAt;
 }

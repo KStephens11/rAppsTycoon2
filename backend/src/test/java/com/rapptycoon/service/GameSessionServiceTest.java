@@ -39,6 +39,9 @@ class GameSessionServiceTest {
     @Mock
     private PlayerRepository playerRepository;
 
+    @Mock
+    private BasestationService basestationService;
+
     private GameProperties gameProperties;
     private GameSessionService gameSessionService;
 
@@ -50,7 +53,7 @@ class GameSessionServiceTest {
         players.setMax(6);
         gameProperties.setPlayers(players);
 
-        gameSessionService = new GameSessionService(gameSessionRepository, playerRepository, gameProperties);
+        gameSessionService = new GameSessionService(gameSessionRepository, playerRepository, gameProperties, basestationService);
     }
 
     @Nested
@@ -568,8 +571,9 @@ class GameSessionServiceTest {
 
             when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
             when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+            when(playerRepository.findBySessionToken("token1")).thenReturn(Optional.of(player1));
 
-            SessionResponse response = gameSessionService.getSession("ABCD1234");
+            SessionResponse response = gameSessionService.getSession("ABCD1234", "token1");
 
             assertThat(response.sessionCode()).isEqualTo("ABCD1234");
             assertThat(response.players()).hasSize(2);
@@ -578,9 +582,17 @@ class GameSessionServiceTest {
         @Test
         @DisplayName("throws SessionNotFoundException for non-existent code")
         void throwsSessionNotFoundForNonExistentCode() {
+            Player player = Player.builder()
+                    .id(1L)
+                    .sessionId(1L)
+                    .displayName("Host")
+                    .sessionToken("token1")
+                    .connected(true)
+                    .build();
+            when(playerRepository.findBySessionToken("token1")).thenReturn(Optional.of(player));
             when(gameSessionRepository.findBySessionCode("INVALID1")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> gameSessionService.getSession("INVALID1"))
+            assertThatThrownBy(() -> gameSessionService.getSession("INVALID1", "token1"))
                     .isInstanceOf(SessionNotFoundException.class);
         }
     }
