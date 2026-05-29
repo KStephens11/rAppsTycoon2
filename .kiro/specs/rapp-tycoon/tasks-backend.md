@@ -166,13 +166,13 @@
 
 ## Task 12: Security and Access Control
 
-- [ ] 12.1 Implement `SessionTokenFilter` — Spring filter that extracts X-Session-Token header, validates token, sets player context
-- [ ] 12.2 Implement `@RequiresSessionMember` annotation or interceptor — verifies player belongs to the requested session
-- [ ] 12.3 Implement ownership validation on all rApp/basestation endpoints (player can only modify their own resources)
-- [ ] 12.4 Implement rejection of direct score/metrics modification (no endpoints accept score writes from clients)
-- [ ] 12.5 Implement input validation with Bean Validation annotations on all request DTOs (@NotNull, @Size, @Min, @Max, @Pattern)
-- [ ] 12.6 Implement global exception handler (`@ControllerAdvice`) that returns structured error responses without exposing internals
-- [ ] 12.7 Implement internal API key validation for event generator endpoints (X-Internal-Key header check)
+- [x] 12.1 Implement `SessionTokenFilter` — Spring filter that extracts X-Session-Token header, validates token, sets player context
+- [x] 12.2 Implement `@RequiresSessionMember` annotation or interceptor — verifies player belongs to the requested session
+- [x] 12.3 Implement ownership validation on all rApp/basestation endpoints (player can only modify their own resources)
+- [x] 12.4 Implement rejection of direct score/metrics modification (no endpoints accept score writes from clients)
+- [x] 12.5 Implement input validation with Bean Validation annotations on all request DTOs (@NotNull, @Size, @Min, @Max, @Pattern)
+- [x] 12.6 Implement global exception handler (`@ControllerAdvice`) that returns structured error responses without exposing internals
+- [x] 12.7 Implement internal API key validation for event generator endpoints (X-Internal-Key header check)
 
 ## Task 13: Testing
 
