@@ -10,6 +10,7 @@ import com.rapptycoon.repository.*;
 import com.rapptycoon.service.BasestationService;
 import com.rapptycoon.service.EventService;
 import com.rapptycoon.service.GameSessionService;
+import com.rapptycoon.service.RappService;
 import com.rapptycoon.service.ScoreService;
 import com.rapptycoon.websocket.MessageType;
 import com.rapptycoon.websocket.WebSocketBroadcaster;
@@ -41,6 +42,7 @@ public class GameTickEngine {
     private final EventService eventService;
     private final ScoreService scoreService;
     private final GameSessionService gameSessionService;
+    private final RappService rappService;
     private final GameProperties gameProperties;
     private final WebSocketBroadcaster broadcaster;
 
@@ -55,6 +57,7 @@ public class GameTickEngine {
                           EventService eventService,
                           ScoreService scoreService,
                           GameSessionService gameSessionService,
+                          RappService rappService,
                           GameProperties gameProperties,
                           WebSocketBroadcaster broadcaster) {
         this.gameSessionRepository = gameSessionRepository;
@@ -68,6 +71,7 @@ public class GameTickEngine {
         this.eventService = eventService;
         this.scoreService = scoreService;
         this.gameSessionService = gameSessionService;
+        this.rappService = rappService;
         this.gameProperties = gameProperties;
         this.broadcaster = broadcaster;
     }
@@ -93,6 +97,9 @@ public class GameTickEngine {
 
         // 2. Apply active rApp impacts per tick to basestations
         applyRappImpacts(session);
+
+        // 2b. Apply conflict penalties for conflicting rApp pairs
+        applyConflictPenalties(session);
 
         // 3. Apply active event impacts per tick
         applyEventImpacts(session);
@@ -155,6 +162,36 @@ public class GameTickEngine {
                     MetricDeltas impact = behaviour.calculateImpact(aggressiveness);
                     basestationService.updateMetrics(bs.getId(), impact);
                 });
+            }
+        }
+    }
+
+    /**
+     * Applies conflict penalties per tick for conflicting rApp pairs on the same basestation.
+     */
+    private void applyConflictPenalties(GameSession session) {
+        List<Basestation> basestations = getSessionBasestations(session.getId());
+        for (Basestation bs : basestations) {
+            List<RappDeployment> activeDeployments = rappDeploymentRepository
+                    .findByBasestationIdAndStatus(bs.getId(), DeploymentStatus.ACTIVE);
+
+            if (activeDeployments.size() < 2) continue;
+
+            // Get template names for all active deployments
+            List<String> activeRappNames = new ArrayList<>();
+            for (RappDeployment dep : activeDeployments) {
+                rappTemplateRepository.findById(dep.getTemplateId())
+                        .ifPresent(t -> activeRappNames.add(t.getName()));
+            }
+
+            // Check all pairs for conflicts using RappService.detectConflict()
+            for (int i = 0; i < activeRappNames.size(); i++) {
+                for (int j = i + 1; j < activeRappNames.size(); j++) {
+                    MetricDeltas penalty = rappService.detectConflict(activeRappNames.get(i), activeRappNames.get(j));
+                    if (penalty != null) {
+                        basestationService.updateMetrics(bs.getId(), penalty);
+                    }
+                }
             }
         }
     }
@@ -287,6 +324,7 @@ public class GameTickEngine {
     }
 
     boolean shouldEscalate(EventSeverity severity, int currentTick) {
+        if (currentTick == 0) return false;
         return switch (severity) {
             case LOW -> currentTick % 3 == 0;
             case MEDIUM -> currentTick % 2 == 0;

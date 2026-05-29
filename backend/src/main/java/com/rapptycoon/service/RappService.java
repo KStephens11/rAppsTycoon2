@@ -130,8 +130,8 @@ public class RappService {
     }
 
     /**
-     * Activates a deployment: transitions DEPLOYING → ACTIVE, applies impact to basestation metrics.
-     * Called by the tick engine after 1 tick.
+     * Activates a deployment: transitions DEPLOYING → ACTIVE.
+     * Note: Impact application is handled by the tick engine's applyRappImpacts() and applyConflictPenalties().
      */
     @Transactional
     public DeploymentResponse activate(Long deploymentId) {
@@ -143,23 +143,12 @@ public class RappService {
         }
 
         deployment.setStatus(DeploymentStatus.ACTIVE);
+        deployment = rappDeploymentRepository.save(deployment);
 
         RappTemplate template = rappTemplateRepository.findById(deployment.getTemplateId())
                 .orElseThrow(() -> new EntityNotFoundException("RappTemplate not found"));
 
-        Aggressiveness aggressiveness = parseAggressiveness(deployment.getConfiguration());
-        RappBehaviour behaviour = rappBehaviourRegistry.getBehaviour(template.getName());
-        MetricDeltas impact = behaviour.calculateImpact(aggressiveness);
-
-        Basestation updatedBs = basestationService.updateMetrics(deployment.getBasestationId(), impact);
-
-        // Check for conflicts and apply penalties
-        applyConflictPenalties(deployment, template.getName());
-
-        deployment = rappDeploymentRepository.save(deployment);
-
-        MetricsDto metricsDto = toMetricsDto(updatedBs);
-        return toDeploymentResponse(deployment, template.getName(), metricsDto);
+        return toDeploymentResponse(deployment, template.getName(), null);
     }
 
     /**

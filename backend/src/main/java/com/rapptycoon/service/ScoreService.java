@@ -85,8 +85,17 @@ public class ScoreService {
         double weightSatisfaction = gameProperties.getScore().getWeight().getSatisfaction();
         double weightStability = gameProperties.getScore().getWeight().getStability();
 
+        // Calculate effective money: player money minus total basestation costs
+        BigDecimal totalBasestationCost = basestations.stream()
+                .map(Basestation::getCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal effectiveMoney = player.getScoreMoney().subtract(totalBasestationCost);
+        if (effectiveMoney.compareTo(BigDecimal.ZERO) < 0) {
+            effectiveMoney = BigDecimal.ZERO;
+        }
+
         // compositeScore = (money × weightMoney) + (satisfaction × weightSatisfaction) + (stability × weightStability)
-        BigDecimal moneyComponent = player.getScoreMoney()
+        BigDecimal moneyComponent = effectiveMoney
                 .multiply(BigDecimal.valueOf(weightMoney));
         BigDecimal satisfactionComponent = customerSatisfaction
                 .multiply(BigDecimal.valueOf(weightSatisfaction));

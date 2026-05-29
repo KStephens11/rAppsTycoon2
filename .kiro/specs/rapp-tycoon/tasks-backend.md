@@ -176,18 +176,18 @@
 
 ## Task 13: Testing
 
-- [ ] 13.1 Write unit tests for `ScoreService` (score calculation, tiebreakers, determinism)
-- [ ] 13.2 Write unit tests for `GameTickEngine` (metric accumulation, escalation, game end)
-- [ ] 13.3 Write unit tests for `RappService` (deploy, tune, disable, rollback, conflict detection)
-- [ ] 13.4 Write unit tests for `EventService` (creation, escalation, resolution, auto-resolve)
-- [ ] 13.5 Write unit tests for `GameSessionService` (create, join, start validation, state transitions)
-- [ ] 13.6 Write unit tests for each `RappBehaviour` strategy (impact calculation with aggressiveness multiplier)
-- [ ] 13.7 Write unit tests for State pattern transitions (valid and invalid transitions)
-- [ ] 13.8 Write API integration tests for all REST endpoints (happy path + error cases)
-- [ ] 13.9 Write persistence integration tests (save/load entities, transaction rollback on failure)
-- [ ] 13.10 Write WebSocket integration tests (connect, subscribe, receive broadcasts)
-- [ ] 13.11 Write security tests (invalid token rejected, cross-session access denied, direct score modification rejected)
-- [ ] 13.12 Write property-based tests:
+- [x] 13.1 Write unit tests for `ScoreService` (score calculation, tiebreakers, determinism)
+- [x] 13.2 Write unit tests for `GameTickEngine` (metric accumulation, escalation, game end)
+- [x] 13.3 Write unit tests for `RappService` (deploy, tune, disable, rollback, conflict detection)
+- [x] 13.4 Write unit tests for `EventService` (creation, escalation, resolution, auto-resolve)
+- [x] 13.5 Write unit tests for `GameSessionService` (create, join, start validation, state transitions)
+- [x] 13.6 Write unit tests for each `RappBehaviour` strategy (impact calculation with aggressiveness multiplier)
+- [x] 13.7 Write unit tests for State pattern transitions (valid and invalid transitions)
+- [x] 13.8 Write API integration tests for all REST endpoints (happy path + error cases)
+- [x] 13.9 Write persistence integration tests (save/load entities, transaction rollback on failure)
+- [x] 13.10 Write WebSocket integration tests (connect, subscribe, receive broadcasts)
+- [x] 13.11 Write security tests (invalid token rejected, cross-session access denied, direct score modification rejected)
+- [x] 13.12 Write property-based tests:
   - Lobby player count invariant (0-6, start requires ≥2)
   - Basestation assignment non-overlap
   - rApp deploy-disable round trip (metrics return to original)
@@ -201,4 +201,4 @@
   - Score immutability from client
   - Tick-based metric accumulation
   - Game state persistence round trip
-- [ ] 13.13 Write system test: full game flow (create session → join → start → deploy rApp → event fires → metrics change → score updates → game ends → winner determined)
+- [x] 13.13 Write system test: full game flow (create session → join → start → deploy rApp → event fires → metrics change → score updates → game ends → winner determined)
