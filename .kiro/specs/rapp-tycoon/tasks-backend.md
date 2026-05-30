@@ -112,20 +112,20 @@
 
 ## Task 9: Scoring and Leaderboard
 
-- [ ] 9.1 Implement `ScoreService.calculateCompositeScore(playerId)`:
+- [x] 9.1 Implement `ScoreService.calculateCompositeScore(playerId)`:
   - money × 0.30 + customerSatisfaction × 0.35 + networkStability × 0.35
   - customerSatisfaction = average customerExperience across all player basestations
   - networkStability = average of (health + automationReliability + slaCompliance) / 3 across all basestations
-- [ ] 9.2 Implement `ScoreService.recalculateAllScores(sessionId)` — recalculates scores for all players in session
-- [ ] 9.3 Implement `ScoreService.getLeaderboard(sessionCode)` — returns players sorted by composite score descending
-- [ ] 9.4 Implement `ScoreService.determineWinner(sessionCode)` — returns player with highest score, applies tiebreakers (satisfaction > stability > money)
-- [ ] 9.5 Implement `LeaderboardController` with endpoint: `GET /api/sessions/{code}/leaderboard`
-- [ ] 9.6 Implement DTOs: `LeaderboardResponse`, `LeaderboardEntryDto`, `ScoreDto`
+- [x] 9.2 Implement `ScoreService.recalculateAllScores(sessionId)` — recalculates scores for all players in session
+- [x] 9.3 Implement `ScoreService.getLeaderboard(sessionCode)` — returns players sorted by composite score descending
+- [x] 9.4 Implement `ScoreService.determineWinner(sessionCode)` — returns player with highest score, applies tiebreakers (satisfaction > stability > money)
+- [x] 9.5 Implement `LeaderboardController` with endpoint: `GET /api/sessions/{code}/leaderboard`
+- [x] 9.6 Implement DTOs: `LeaderboardResponse`, `LeaderboardEntryDto`, `ScoreDto`
 
 ## Task 10: Game Tick Engine
 
-- [ ] 10.1 Implement `GameTickEngine` as a scheduled service (configurable interval from application.yml, default 5000ms)
-- [ ] 10.2 Implement tick processing per active session:
+- [x] 10.1 Implement `GameTickEngine` as a scheduled service (configurable interval from application.yml, default 5000ms)
+- [x] 10.2 Implement tick processing per active session:
   1. Activate DEPLOYING rApps that have waited 1 tick
   2. Apply active rApp impacts to basestation metrics (using RappBehaviour strategy)
   3. Apply active event impacts to basestation metrics (with escalation multiplier)
@@ -136,58 +136,58 @@
   8. Recalculate all player scores
   9. Increment tick counter, check game end condition (tick >= 60)
   10. Broadcast updates via WebSocket
-- [ ] 10.3 Implement metric clamping: percentage metrics clamped to [0.00, 100.00], cost has no upper limit
-- [ ] 10.4 Implement escalation rate logic:
+- [x] 10.3 Implement metric clamping: percentage metrics clamped to [0.00, 100.00], cost has no upper limit
+- [x] 10.4 Implement escalation rate logic:
   - LOW: +1 level per 3 ticks
   - MEDIUM: +1 level per 2 ticks
   - HIGH: +1 level per tick
   - CRITICAL: +1 level per tick
-- [ ] 10.5 Implement escalation impact multiplier: Level 0 = ×1.0, Level 1 = ×1.5, Level 2 = ×2.0, Level 3 = ×3.0
-- [ ] 10.6 Implement game end condition: transition session to COMPLETED when tick count reaches configured total (default 60)
-- [ ] 10.7 Implement tick counter persistence (store current tick in game_session or in-memory per session)
+- [x] 10.5 Implement escalation impact multiplier: Level 0 = ×1.0, Level 1 = ×1.5, Level 2 = ×2.0, Level 3 = ×3.0
+- [x] 10.6 Implement game end condition: transition session to COMPLETED when tick count reaches configured total (default 60)
+- [x] 10.7 Implement tick counter persistence (store current tick in game_session or in-memory per session)
 
 ## Task 11: WebSocket Real-Time Communication
 
-- [ ] 11.1 Configure Spring WebSocket with STOMP protocol (`/ws/game` endpoint)
-- [ ] 11.2 Implement WebSocket authentication interceptor (validate X-Session-Token on connect)
-- [ ] 11.3 Implement WebSocket session registry (track connected players per game session)
-- [ ] 11.4 Implement server-to-client message types:
+- [x] 11.1 Configure Spring WebSocket with STOMP protocol (`/ws/game` endpoint)
+- [x] 11.2 Implement WebSocket authentication interceptor (validate X-Session-Token on connect)
+- [x] 11.3 Implement WebSocket session registry (track connected players per game session)
+- [x] 11.4 Implement server-to-client message types:
   - `GAME_STARTED` — broadcast to all players in session
   - `GAME_ENDED` — broadcast with final leaderboard and winner
   - `EVENT_OCCURRED` — targeted to affected player
   - `METRICS_UPDATED` — targeted to player whose basestation changed
   - `LEADERBOARD_UPDATED` — broadcast to all players in session
   - `RAPP_STATUS_CHANGED` — targeted to player whose rApp changed
-- [ ] 11.5 Implement client-to-server `PLAYER_ACTION` message handling (validate, route to appropriate service)
-- [ ] 11.6 Implement `ACTION_ERROR` response message for invalid WebSocket actions
-- [ ] 11.7 Implement broadcast helper: `WebSocketBroadcaster.broadcastToSession(code, message)`
-- [ ] 11.8 Implement targeted helper: `WebSocketBroadcaster.sendToPlayer(playerId, message)`
-- [ ] 11.9 Implement disconnect handling (mark player as disconnected, allow reconnection)
+- [x] 11.5 Implement client-to-server `PLAYER_ACTION` message handling (validate, route to appropriate service)
+- [x] 11.6 Implement `ACTION_ERROR` response message for invalid WebSocket actions
+- [x] 11.7 Implement broadcast helper: `WebSocketBroadcaster.broadcastToSession(code, message)`
+- [x] 11.8 Implement targeted helper: `WebSocketBroadcaster.sendToPlayer(playerId, message)`
+- [x] 11.9 Implement disconnect handling (mark player as disconnected, allow reconnection)
 
 ## Task 12: Security and Access Control
 
-- [ ] 12.1 Implement `SessionTokenFilter` — Spring filter that extracts X-Session-Token header, validates token, sets player context
-- [ ] 12.2 Implement `@RequiresSessionMember` annotation or interceptor — verifies player belongs to the requested session
-- [ ] 12.3 Implement ownership validation on all rApp/basestation endpoints (player can only modify their own resources)
-- [ ] 12.4 Implement rejection of direct score/metrics modification (no endpoints accept score writes from clients)
-- [ ] 12.5 Implement input validation with Bean Validation annotations on all request DTOs (@NotNull, @Size, @Min, @Max, @Pattern)
-- [ ] 12.6 Implement global exception handler (`@ControllerAdvice`) that returns structured error responses without exposing internals
-- [ ] 12.7 Implement internal API key validation for event generator endpoints (X-Internal-Key header check)
+- [x] 12.1 Implement `SessionTokenFilter` — Spring filter that extracts X-Session-Token header, validates token, sets player context
+- [x] 12.2 Implement `@RequiresSessionMember` annotation or interceptor — verifies player belongs to the requested session
+- [x] 12.3 Implement ownership validation on all rApp/basestation endpoints (player can only modify their own resources)
+- [x] 12.4 Implement rejection of direct score/metrics modification (no endpoints accept score writes from clients)
+- [x] 12.5 Implement input validation with Bean Validation annotations on all request DTOs (@NotNull, @Size, @Min, @Max, @Pattern)
+- [x] 12.6 Implement global exception handler (`@ControllerAdvice`) that returns structured error responses without exposing internals
+- [x] 12.7 Implement internal API key validation for event generator endpoints (X-Internal-Key header check)
 
 ## Task 13: Testing
 
-- [ ] 13.1 Write unit tests for `ScoreService` (score calculation, tiebreakers, determinism)
-- [ ] 13.2 Write unit tests for `GameTickEngine` (metric accumulation, escalation, game end)
-- [ ] 13.3 Write unit tests for `RappService` (deploy, tune, disable, rollback, conflict detection)
-- [ ] 13.4 Write unit tests for `EventService` (creation, escalation, resolution, auto-resolve)
-- [ ] 13.5 Write unit tests for `GameSessionService` (create, join, start validation, state transitions)
-- [ ] 13.6 Write unit tests for each `RappBehaviour` strategy (impact calculation with aggressiveness multiplier)
-- [ ] 13.7 Write unit tests for State pattern transitions (valid and invalid transitions)
-- [ ] 13.8 Write API integration tests for all REST endpoints (happy path + error cases)
-- [ ] 13.9 Write persistence integration tests (save/load entities, transaction rollback on failure)
-- [ ] 13.10 Write WebSocket integration tests (connect, subscribe, receive broadcasts)
-- [ ] 13.11 Write security tests (invalid token rejected, cross-session access denied, direct score modification rejected)
-- [ ] 13.12 Write property-based tests:
+- [x] 13.1 Write unit tests for `ScoreService` (score calculation, tiebreakers, determinism)
+- [x] 13.2 Write unit tests for `GameTickEngine` (metric accumulation, escalation, game end)
+- [x] 13.3 Write unit tests for `RappService` (deploy, tune, disable, rollback, conflict detection)
+- [x] 13.4 Write unit tests for `EventService` (creation, escalation, resolution, auto-resolve)
+- [x] 13.5 Write unit tests for `GameSessionService` (create, join, start validation, state transitions)
+- [x] 13.6 Write unit tests for each `RappBehaviour` strategy (impact calculation with aggressiveness multiplier)
+- [x] 13.7 Write unit tests for State pattern transitions (valid and invalid transitions)
+- [x] 13.8 Write API integration tests for all REST endpoints (happy path + error cases)
+- [x] 13.9 Write persistence integration tests (save/load entities, transaction rollback on failure)
+- [x] 13.10 Write WebSocket integration tests (connect, subscribe, receive broadcasts)
+- [x] 13.11 Write security tests (invalid token rejected, cross-session access denied, direct score modification rejected)
+- [x] 13.12 Write property-based tests:
   - Lobby player count invariant (0-6, start requires ≥2)
   - Basestation assignment non-overlap
   - rApp deploy-disable round trip (metrics return to original)
@@ -201,4 +201,4 @@
   - Score immutability from client
   - Tick-based metric accumulation
   - Game state persistence round trip
-- [ ] 13.13 Write system test: full game flow (create session → join → start → deploy rApp → event fires → metrics change → score updates → game ends → winner determined)
+- [x] 13.13 Write system test: full game flow (create session → join → start → deploy rApp → event fires → metrics change → score updates → game ends → winner determined)
