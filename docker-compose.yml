@@ -27,5 +27,13 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
 
+  frontend:
+    build: ./frontend
+    container_name: rapp-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
 volumes:
   mysql_data:
