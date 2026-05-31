@@ -10,10 +10,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
+import { useDrag } from '../../context/DragContext';
 import { apiGet } from '../../services/api';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { CatalogueSkeleton } from '../ui/Skeleton';
+import { DeploymentPicker } from './DeploymentPicker';
 
 export interface RappTemplate {
   id: number;
@@ -69,14 +71,18 @@ function RiskIndicator({ value, label }: { value: number; label: string }) {
 }
 
 interface RappCatalogueProps {
-  onDeploy: (rapp: RappTemplate) => void;
+  onDeploy?: (rapp: RappTemplate) => void;
+  basestations?: Array<{ id: number; name: string }>;
+  onConfirmDeploy?: (templateId: number, basestationId: number) => void;
 }
 
-export function RappCatalogue({ onDeploy }: RappCatalogueProps) {
+export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConfirmDeploy }: RappCatalogueProps) {
   const { token } = useGame();
+  const { dragState, startDrag, endDrag } = useDrag();
   const [rapps, setRapps] = useState<RappTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pickerOpenForId, setPickerOpenForId] = useState<number | null>(null);
 
   const fetchCatalogue = useCallback(async () => {
     if (!token) return;
@@ -96,6 +102,23 @@ export function RappCatalogue({ onDeploy }: RappCatalogueProps) {
   useEffect(() => {
     fetchCatalogue();
   }, [fetchCatalogue]);
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>, rapp: RappTemplate) => {
+      e.dataTransfer.setData('text/plain', String(rapp.id));
+      e.dataTransfer.effectAllowed = 'move';
+      // Hide the native drag ghost image — we use a custom DragPreview instead
+      const emptyImg = new Image();
+      emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      e.dataTransfer.setDragImage(emptyImg, 0, 0);
+      startDrag({ templateId: rapp.id, name: rapp.name, icon: rapp.name });
+    },
+    [startDrag]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    endDrag();
+  }, [endDrag]);
 
   if (loading) {
     return <CatalogueSkeleton />;
@@ -119,19 +142,27 @@ export function RappCatalogue({ onDeploy }: RappCatalogueProps) {
       </h4>
       {rapps.map((rapp) => {
         const Icon = getRappIcon(rapp.name);
+        const isDragging = dragState?.templateId === rapp.id;
         return (
           <div
             key={rapp.id}
+            draggable
             tabIndex={0}
             role="button"
             aria-label={`Deploy ${rapp.name} - €${rapp.cost}`}
+            onDragStart={(e) => handleDragStart(e, rapp)}
+            onDragEnd={handleDragEnd}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onDeploy(rapp);
+                if (basestationsProp && onConfirmDeploy) {
+                  setPickerOpenForId(rapp.id);
+                } else {
+                  onDeploy?.(rapp);
+                }
               }
             }}
-            className="p-3 rounded-lg bg-surface-light border border-surface-lighter hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
+            className={`relative p-3 rounded-lg bg-surface-light border border-surface-lighter hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-grab ${isDragging ? 'opacity-50' : ''}`}
           >
             <div className="flex items-start gap-2.5">
               <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
@@ -152,19 +183,19 @@ export function RappCatalogue({ onDeploy }: RappCatalogueProps) {
                   <RiskIndicator value={100 - rapp.confidence} label="Conf" />
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeploy(rapp);
-                }}
-                aria-label={`Deploy ${rapp.name}`}
-                className="shrink-0"
-              >
-                Deploy
-              </Button>
             </div>
+            {pickerOpenForId === rapp.id && basestationsProp && onConfirmDeploy && (
+              <DeploymentPicker
+                templateId={rapp.id}
+                templateName={rapp.name}
+                basestations={basestationsProp}
+                onSelect={(basestationId) => {
+                  onConfirmDeploy(rapp.id, basestationId);
+                  setPickerOpenForId(null);
+                }}
+                onClose={() => setPickerOpenForId(null)}
+              />
+            )}
           </div>
         );
       })}

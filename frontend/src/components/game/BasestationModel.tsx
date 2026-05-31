@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { EventSeverity } from './IsometricMap';
+import { useDragOptional } from '../../context/DragContext';
 
 interface BasestationModelProps {
   position: [number, number, number];
@@ -15,6 +16,14 @@ interface BasestationModelProps {
   activeRapps: number;
   showResolution?: boolean;
   onClick: () => void;
+  /** When true, show a subtle cyan glow indicating this is a valid drop target */
+  isDragActive?: boolean;
+  /** When true, show a strong highlight (brighter glow, scale bump) as the drop indicator */
+  isHoveredTarget?: boolean;
+  /** Basestation ID for context updates during drag-and-drop */
+  basestationId?: number;
+  /** Callback triggered when a dragged rApp is dropped on this basestation */
+  onDrop?: (basestationId: number) => void;
 }
 
 function getHealthColor(health: number): string {
@@ -75,10 +84,16 @@ export function BasestationModel({
   activeRapps,
   showResolution,
   onClick,
+  isDragActive = false,
+  isHoveredTarget = false,
+  basestationId,
+  onDrop,
 }: BasestationModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const antennaRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
+  const dragContext = useDragOptional();
+  const setHoveredTarget = dragContext?.setHoveredTarget;
 
   const healthColor = getHealthColor(health);
   // Shift health ring glow toward red as escalation increases
@@ -87,6 +102,9 @@ export function BasestationModel({
   // Boost ring intensity at high escalation to make the red glow more dramatic
   const escalatedRingIntensity = hasEvent ? ringIntensity + highestEscalation * 0.3 : ringIntensity;
 
+  // Compute scale: hovered drop target gets a scale bump
+  const computedScale = isHoveredTarget ? 1.2 : selected ? 1.15 : 1;
+
   // Rotate antenna
   useFrame((_, delta) => {
     if (antennaRef.current) {
@@ -94,14 +112,39 @@ export function BasestationModel({
     }
   });
 
+  const handlePointerEnter = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    setHovered(true);
+    document.body.style.cursor = 'pointer';
+    if (isDragActive && basestationId != null && setHoveredTarget) {
+      setHoveredTarget(basestationId);
+    }
+  };
+
+  const handlePointerLeave = () => {
+    setHovered(false);
+    document.body.style.cursor = 'auto';
+    if (isDragActive && setHoveredTarget) {
+      setHoveredTarget(null);
+    }
+  };
+
+  const handlePointerUp = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    if (isDragActive && basestationId != null && onDrop) {
+      onDrop(basestationId);
+    }
+  };
+
   return (
     <group
       ref={groupRef}
       position={position}
-      scale={selected ? 1.15 : 1}
+      scale={computedScale}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
-      onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
+      onPointerOver={(e) => { handlePointerEnter(e); }}
+      onPointerOut={() => { handlePointerLeave(); }}
+      onPointerUp={(e) => { handlePointerUp(e); }}
     >
       {/* Base platform */}
       <mesh position={[0, 0.1, 0]} castShadow>
@@ -120,6 +163,34 @@ export function BasestationModel({
           opacity={0.9}
         />
       </mesh>
+
+      {/* Drop target indicator — subtle cyan glow when drag is active */}
+      {isDragActive && (
+        <mesh position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.85, 0.04, 8, 32]} />
+          <meshStandardMaterial
+            color="#06b6d4"
+            emissive="#06b6d4"
+            emissiveIntensity={isHoveredTarget ? 4.0 : 1.5}
+            transparent
+            opacity={isHoveredTarget ? 0.95 : 0.6}
+          />
+        </mesh>
+      )}
+
+      {/* Hovered drop target — additional bright outer ring */}
+      {isHoveredTarget && (
+        <mesh position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[1.0, 0.05, 8, 32]} />
+          <meshStandardMaterial
+            color="#22d3ee"
+            emissive="#22d3ee"
+            emissiveIntensity={5.0}
+            transparent
+            opacity={0.85}
+          />
+        </mesh>
+      )}
 
       {/* Main tower pole */}
       <mesh position={[0, 1.2, 0]} castShadow>

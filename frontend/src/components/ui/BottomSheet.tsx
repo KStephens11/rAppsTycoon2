@@ -9,14 +9,18 @@ interface PanInfo {
 }
 
 interface BottomSheetProps {
+  /** The always-visible strip content (e.g. CatalogueStrip) shown when collapsed */
+  strip?: ReactNode;
+  /** The expandable content (e.g. Events and Leaderboard sections) */
   children: ReactNode;
 }
 
 /**
- * Mobile bottom sheet that shows sidebar content.
- * Starts collapsed (showing just the tab bar), can be dragged up to reveal full content.
+ * Mobile bottom sheet that shows the catalogue strip when collapsed
+ * and reveals Events/Leaderboard expandable sections when dragged up.
+ * Only visible on mobile (< 768px).
  */
-export function BottomSheet({ children }: BottomSheetProps) {
+export function BottomSheet({ strip, children }: BottomSheetProps) {
   const [expanded, setExpanded] = useState(false);
   const y = useMotionValue(0);
   const opacity = useTransform(y, [-200, 0], [1, 0.6]);
@@ -32,7 +36,7 @@ export function BottomSheet({ children }: BottomSheetProps) {
   return (
     <motion.div
       className="fixed inset-x-0 bottom-0 z-40 md:hidden bg-surface border-t border-surface-lighter rounded-t-2xl shadow-2xl"
-      animate={{ height: expanded ? '70vh' : '56px' }}
+      animate={{ height: expanded ? '70vh' : 'auto' }}
       transition={{ type: 'spring', stiffness: 400, damping: 35 }}
       style={{ opacity }}
     >
@@ -49,8 +53,15 @@ export function BottomSheet({ children }: BottomSheetProps) {
         <GripHorizontal size={20} className="text-text-muted" />
       </motion.div>
 
-      {/* Content */}
-      <div className={`overflow-y-auto ${expanded ? 'h-[calc(70vh-40px)]' : 'h-0 overflow-hidden'}`}>
+      {/* Always-visible strip (CatalogueStrip) */}
+      {strip && (
+        <div className="px-1">
+          {strip}
+        </div>
+      )}
+
+      {/* Expandable content (Events + Leaderboard sections) */}
+      <div className={`overflow-y-auto ${expanded ? 'max-h-[calc(70vh-100px)]' : 'max-h-0 overflow-hidden'}`}>
         {children}
       </div>
     </motion.div>
