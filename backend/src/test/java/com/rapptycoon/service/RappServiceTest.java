@@ -165,20 +165,16 @@ class RappServiceTest {
     class ActivateTests {
 
         @Test
-        @DisplayName("transitions DEPLOYING → ACTIVE and applies impact")
-        void transitionsDeployingToActiveAndAppliesImpact() {
+        @DisplayName("transitions DEPLOYING → ACTIVE")
+        void transitionsDeployingToActive() {
             when(rappDeploymentRepository.findById(100L)).thenReturn(Optional.of(deployment));
             when(rappTemplateRepository.findById(1L)).thenReturn(Optional.of(energySaverTemplate));
-            when(rappBehaviourRegistry.getBehaviour("Energy Saver")).thenReturn(new EnergySaverBehaviour());
-            when(basestationService.updateMetrics(eq(10L), any(MetricDeltas.class))).thenReturn(basestation);
-            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.ACTIVE))
-                    .thenReturn(List.of());
             when(rappDeploymentRepository.save(any(RappDeployment.class))).thenAnswer(inv -> inv.getArgument(0));
 
             DeploymentResponse response = rappService.activate(100L);
 
             assertThat(response.status()).isEqualTo("ACTIVE");
-            verify(basestationService).updateMetrics(eq(10L), any(MetricDeltas.class));
+            verifyNoInteractions(basestationService);
         }
 
         @Test
