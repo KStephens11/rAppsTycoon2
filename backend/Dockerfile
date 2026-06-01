@@ -1,7 +1,10 @@
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
-COPY . .
-RUN ./mvnw clean package -DskipTests
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN ./mvnw dependency:go-offline -q
+COPY src/ src/
+RUN ./mvnw clean package -DskipTests -q
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
