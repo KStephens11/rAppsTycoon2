@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         SONAR_TOKEN = credentials('sonar-token1')
+        DOCKER_HOST = 'tcp://localhost:2375'
         IMAGE_BACKEND = "rapp-backend:${BUILD_NUMBER}"
         IMAGE_EVENT_GENERATOR = "rapp-event-generator:${BUILD_NUMBER}"
     }
