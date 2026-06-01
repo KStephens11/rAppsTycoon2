@@ -154,6 +154,25 @@
   font-size: 16px;
 }
 
+.dashboard-main {
+  grid-area: main;
+  position: relative;
+  overflow: hidden; /* Prevent panning/scrolling as requested */
+  background-color: #f0f2f5;
+}
+
+.map-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%; /* Fill the container instead of fixed 2000px */
+  height: 100%;
+  /* background-image set in Map.jsx to use imported asset */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .basestation {
   position: absolute;
   width: 60px;

@@ -1,32 +1,30 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
 
 const GameContext = createContext();
 
 export const useGame = () => useContext(GameContext);
 
 export const GameProvider = ({ children }) => {
-  const [sessionCode, setSessionCode] = useState(localStorage.getItem('sessionCode') || '');
-  const [sessionToken, setSessionToken] = useState(localStorage.getItem('sessionToken') || '');
+  const [sessionCode, setSessionCode] = useState(() => localStorage.getItem('sessionCode') || '');
+  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem('sessionToken') || '');
   const [gameState, setGameState] = useState('LOBBY'); // LOBBY, ACTIVE, COMPLETE
-  const [playerData, setPlayerData] = useState(null);
+  const [playerData] = useState(null);
   const [basestations, setBasestations] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboard] = useState([]);
   const [catalogue, setCatalogue] = useState([]);
-  const [processedCatalogue, setProcessedCatalogue] = useState([]);
   const [error, setError] = useState(null);
 
-  // Derive catalog status from deployments
-  useEffect(() => {
-    if (!catalogue.length) return;
+  // FIX: Derived state computed synchronously using useMemo instead of useEffect + useState
+  const processedCatalogue = useMemo(() => {
+    if (!catalogue.length) return [];
 
-    const processed = catalogue.map(template => {
-      // Find any deployments of this template across all basestations
+    return catalogue.map(template => {
       let activeDeployment = null;
-      
+
       for (const bs of basestations) {
         const found = bs.deployedRapps?.find(d => d.templateId === template.id);
         if (found) {
-          // Priority to ACTIVE status if multiple exist
           if (!activeDeployment || found.status === 'ACTIVE') {
             activeDeployment = found;
           }
@@ -40,8 +38,7 @@ export const GameProvider = ({ children }) => {
       if (activeDeployment) {
         status = activeDeployment.status.toLowerCase();
         level = activeDeployment.version;
-        
-        // Map backend status to user-friendly text
+
         if (status === 'active') statusText = `Active - Level ${level}`;
         else if (status === 'deployed') statusText = "Deployed";
         else statusText = status.charAt(0).toUpperCase() + status.slice(1);
@@ -54,8 +51,6 @@ export const GameProvider = ({ children }) => {
         level
       };
     });
-
-    setProcessedCatalogue(processed);
   }, [catalogue, basestations]);
 
   const apiFetch = useCallback(async (endpoint, options = {}) => {
@@ -64,7 +59,7 @@ export const GameProvider = ({ children }) => {
       'Content-Type': 'application/json',
       ...options.headers,
     };
-    
+
     if (sessionToken) {
       headers['X-Session-Token'] = sessionToken;
     }
@@ -78,7 +73,7 @@ export const GameProvider = ({ children }) => {
       return data;
     } catch (err) {
       setError(err.message);
-      throw err;
+      throw err; // Re-throwing is now fine since we removed the call-stack looping inside useEffect loaders
     }
   }, [sessionToken]);
 
@@ -97,8 +92,6 @@ export const GameProvider = ({ children }) => {
     try {
       const data = await apiFetch(`/api/sessions/${sessionCode}`);
       setGameState(data.state);
-      // Logic to find current player from data.players or data.player if available
-      // For now we assume we might need another endpoint or the join/create response
     } catch (err) {
       console.error("Failed to fetch session", err);
     }
@@ -114,27 +107,26 @@ export const GameProvider = ({ children }) => {
     }
   }, [apiFetch, sessionToken]);
 
-  // Initial load
+  // Initial load safely calls memoized callbacks asynchronously
   useEffect(() => {
     if (sessionCode && sessionToken) {
-        refreshSession();
-        refreshBasestations();
-        refreshCatalogue();
+      refreshSession();
+      refreshBasestations();
+      refreshCatalogue();
     }
   }, [sessionCode, sessionToken, refreshSession, refreshBasestations, refreshCatalogue]);
 
-  // Polling for updates (fallback until WebSockets are fully integrated)
+  // Polling for updates
   useEffect(() => {
     if (gameState === 'ACTIVE') {
       const interval = setInterval(() => {
         refreshBasestations();
-        // Also refresh leaderboard/player stats here
       }, 5000);
       return () => clearInterval(interval);
     }
   }, [gameState, refreshBasestations]);
 
-  const createSession = async (hostName) => {
+  const createSession = useCallback(async (hostName) => {
     const data = await apiFetch('/api/sessions', {
       method: 'POST',
       body: JSON.stringify({ hostName }),
@@ -144,9 +136,9 @@ export const GameProvider = ({ children }) => {
     localStorage.setItem('sessionCode', data.sessionCode);
     localStorage.setItem('sessionToken', data.hostPlayer.sessionToken);
     return data;
-  };
+  }, [apiFetch]);
 
-  const joinSession = async (code, displayName) => {
+  const joinSession = useCallback(async (code, displayName) => {
     const data = await apiFetch(`/api/sessions/${code}/join`, {
       method: 'POST',
       body: JSON.stringify({ displayName }),
@@ -156,33 +148,52 @@ export const GameProvider = ({ children }) => {
     localStorage.setItem('sessionCode', code);
     localStorage.setItem('sessionToken', data.player.sessionToken);
     return data;
-  };
+  }, [apiFetch]);
 
-  const startSession = async () => {
-    const data = await apiFetch(`/api/sessions/${sessionCode}/start`, {
+  const startSession = useCallback(async () => {
+    await apiFetch(`/api/sessions/${sessionCode}/start`, {
       method: 'POST',
     });
     setGameState('ACTIVE');
-    return data;
-  };
+  }, [apiFetch, sessionCode]);
+
+  const contextValue = useMemo(() => ({
+    sessionCode,
+    sessionToken,
+    gameState,
+    playerData,
+    basestations,
+    leaderboard,
+    catalogue,
+    processedCatalogue,
+    error,
+    createSession,
+    joinSession,
+    startSession,
+    refreshBasestations,
+  }), [
+    sessionCode,
+    sessionToken,
+    gameState,
+    playerData,
+    basestations,
+    leaderboard,
+    catalogue,
+    processedCatalogue,
+    error,
+    createSession,
+    joinSession,
+    startSession,
+    refreshBasestations,
+  ]);
 
   return (
-    <GameContext.Provider value={{
-      sessionCode,
-      sessionToken,
-      gameState,
-      playerData,
-      basestations,
-      leaderboard,
-      catalogue,
-      processedCatalogue,
-      error,
-      createSession,
-      joinSession,
-      startSession,
-      refreshBasestations,
-    }}>
+    <GameContext.Provider value={contextValue}>
       {children}
     </GameContext.Provider>
   );
+};
+
+GameProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 };

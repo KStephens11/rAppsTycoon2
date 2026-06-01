@@ -1,4 +1,4 @@
-import React from 'react';
+import 'react';
 import { useGame } from './GameContext';
 import Map from './components/map/Map';
 import './Dashboard.css';
