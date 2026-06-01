@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import PropTypes from 'prop-types';
 
 const GameContext = createContext();
 
@@ -192,8 +191,4 @@ export const GameProvider = ({ children }) => {
       {children}
     </GameContext.Provider>
   );
-};
-
-GameProvider.propTypes = {
-  children: PropTypes.node.isRequired,
 };
