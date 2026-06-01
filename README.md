@@ -1,16 +1,88 @@
-# React + Vite
+# rApp Tycoon
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A browser-based multiplayer strategy game where 2-6 players deploy and manage rApps to optimise a virtual 5G network. Built with React, Spring Boot, Python, and MySQL.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```
+Frontend (React) ↔ Backend (Spring Boot) ↔ MySQL
+                         ↑
+               Event Generator (Python)
+```
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Docker Desktop
 
-## Expanding the ESLint configuration
+## Local Development
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**1. Clone and configure environment**
+```bash
+cp .env.example .env
+```
+
+The default `.env` values work out of the box for local development. No changes needed.
+
+**2. Start all services**
+```bash
+docker compose up --build
+```
+
+Services start in order: MySQL → Backend → Event Generator.
+
+**3. Verify**
+```bash
+docker compose ps
+```
+
+All three services should be running:
+- `rapp-mysql` — `healthy`
+- `rapp-backend` — `healthy`
+- `rapp-event-generator` — `Up`
+
+Backend health check:
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MYSQL_ROOT_PASSWORD` | MySQL root password | — |
+| `MYSQL_DATABASE` | Database name | `rapptycoon` |
+| `MYSQL_USER` | Database user | `rapptycoon` |
+| `MYSQL_PASSWORD` | Database password | — |
+| `INTERNAL_API_KEY` | Shared secret between backend and event generator | — |
+
+## Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Backend API | `8080` | Spring Boot REST API + WebSocket |
+| MySQL | `3307` | Database (mapped from internal 3306) |
+
+## API
+
+Base URL: `http://localhost:8080`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/sessions` | Create a game session |
+| POST | `/api/sessions/{code}/join` | Join a session |
+| POST | `/api/sessions/{code}/start` | Start the game (host only, min 2 players) |
+| GET | `/api/sessions/{code}` | Get session state |
+| GET | `/api/rapps/catalogue` | List available rApps |
+| GET | `/actuator/health` | Health check |
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React, Nginx |
+| Backend | Java 17, Spring Boot 3, Spring Data JPA, WebSocket |
+| Event Generator | Python 3.11 |
+| Database | MySQL 8.4 |
+| Containerisation | Docker |
+| Orchestration | Kubernetes (see `k8s/`) |
+| CI | GitHub Actions + SonarCloud |

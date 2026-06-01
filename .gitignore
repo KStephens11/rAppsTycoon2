@@ -1,24 +1,33 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Build output
+target/
+build/
 
-node_modules
-dist
-dist-ssr
-*.local
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log
+
+# Node (frontend)
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Docker
+.docker/

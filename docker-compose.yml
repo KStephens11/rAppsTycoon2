@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: rapp-mysql
+    env_file: .env
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: rapp-backend
+    env_file: .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  event-generator:
+    build: ./event-generator
+    container_name: rapp-event-generator
+    env_file: .env
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_BASE_URL: http://backend:8080
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+
+volumes:
+  mysql_data:
