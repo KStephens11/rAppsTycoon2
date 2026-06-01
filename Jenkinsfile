@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('sonar-token')
+        SONAR_TOKEN = credentials('sonar-token1')
         IMAGE_BACKEND = "rapp-backend:${BUILD_NUMBER}"
         IMAGE_EVENT_GENERATOR = "rapp-event-generator:${BUILD_NUMBER}"
     }
