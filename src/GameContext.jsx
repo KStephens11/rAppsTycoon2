@@ -10,7 +10,7 @@ export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState('LOBBY'); // LOBBY, ACTIVE, COMPLETE
   const [playerData] = useState(null);
   const [basestations, setBasestations] = useState([]);
-  const [leaderboard] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [catalogue, setCatalogue] = useState([]);
   const [error, setError] = useState(null);
 
@@ -106,24 +106,36 @@ export const GameProvider = ({ children }) => {
     }
   }, [apiFetch, sessionToken]);
 
+  const refreshLeaderboard = useCallback(async () => {
+    if (!sessionCode || !sessionToken) return;
+    try {
+      const data = await apiFetch(`/api/sessions/${sessionCode}/leaderboard`);
+      setLeaderboard(data.leaderboard);
+    } catch (err) {
+      console.error("Failed to fetch leaderboard", err);
+    }
+  }, [apiFetch, sessionCode, sessionToken]);
+
   // Initial load safely calls memoized callbacks asynchronously
   useEffect(() => {
     if (sessionCode && sessionToken) {
       refreshSession();
       refreshBasestations();
       refreshCatalogue();
+      refreshLeaderboard();
     }
-  }, [sessionCode, sessionToken, refreshSession, refreshBasestations, refreshCatalogue]);
+  }, [sessionCode, sessionToken, refreshSession, refreshBasestations, refreshCatalogue, refreshLeaderboard]);
 
   // Polling for updates
   useEffect(() => {
     if (gameState === 'ACTIVE') {
       const interval = setInterval(() => {
         refreshBasestations();
+        refreshLeaderboard();
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [gameState, refreshBasestations]);
+  }, [gameState, refreshBasestations, refreshLeaderboard]);
 
   const createSession = useCallback(async (hostName) => {
     const data = await apiFetch('/api/sessions', {
@@ -170,6 +182,7 @@ export const GameProvider = ({ children }) => {
     joinSession,
     startSession,
     refreshBasestations,
+    refreshLeaderboard,
   }), [
     sessionCode,
     sessionToken,
@@ -184,6 +197,7 @@ export const GameProvider = ({ children }) => {
     joinSession,
     startSession,
     refreshBasestations,
+    refreshLeaderboard,
   ]);
 
   return (

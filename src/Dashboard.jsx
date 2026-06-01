@@ -4,7 +4,10 @@ import Map from './components/map/Map';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const { sessionCode, gameState, startSession, processedCatalogue } = useGame();
+  const { sessionCode, gameState, startSession, processedCatalogue, leaderboard } = useGame();
+
+  // Only show top 3 players
+  const topPlayers = leaderboard ? leaderboard.slice(0, 3) : [];
 
   const getRappIcon = (name) => {
     if (name.includes("Energy")) return "⚡";
@@ -20,7 +23,7 @@ const Dashboard = () => {
       <header className="dashboard-header">
         <div className="logo-section">
           <h2 style={{ margin: 0 }}>rApp Tycoon</h2>
-          <span style={{ fontSize: '12px', color: 'var(--text)' }}>Session: {sessionCode}</span>
+          <span style={{ fontSize: '12px', color: '#a0acbd' }}>Session: {sessionCode}</span>
         </div>
         
         <div className="player-stats">
@@ -48,41 +51,67 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-header">
-          <h3>rApp Catalog</h3>
-        </div>
-        <div className="catalogue-list">
-          {processedCatalogue && processedCatalogue.length > 0 ? (
-            processedCatalogue.map((rapp) => (
-              <div key={rapp.id} className={`catalogue-item ${rapp.status}`} title={rapp.purpose}>
-                <div className="rapp-icon-container">
-                  {getRappIcon(rapp.name)}
-                </div>
-                <div className="rapp-info">
-                  <div className="rapp-name">{rapp.name}</div>
-                  <div className="rapp-status">{rapp.statusText}</div>
-                </div>
-                <div className="rapp-controls">
-                  {rapp.status === 'active' && (
-                    <>
-                      <span className="control-icon">▲</span>
-                      <span className="level-indicator">{rapp.level}</span>
-                    </>
-                  )}
-                  {rapp.status === 'locked' && <span className="lock-icon">🔒</span>}
-                  {rapp.status === 'unlocked' && <span className="lock-icon" style={{color: '#52b788'}}>🔓</span>}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div style={{ opacity: 0.5, fontStyle: 'italic', padding: '20px' }}>Catalogue loading...</div>
-          )}
-        </div>
-      </aside>
-
       <main className="dashboard-main">
         <Map />
+
+        {/* Floating rApp Catalogue Card */}
+        <div className="floating-catalogue">
+          <div className="catalogue-header">
+            <h4>rApp Catalog</h4>
+          </div>
+          <div className="catalogue-list-mini">
+            {processedCatalogue && processedCatalogue.length > 0 ? (
+              processedCatalogue.map((rapp) => (
+                <div key={rapp.id} className={`catalogue-item-mini ${rapp.status}`} title={rapp.purpose}>
+                  <div className="rapp-icon-container-mini">
+                    {getRappIcon(rapp.name)}
+                  </div>
+                  <div className="rapp-info-mini">
+                    <div className="rapp-name-mini">{rapp.name}</div>
+                    <div className="rapp-status-mini">{rapp.statusText}</div>
+                  </div>
+                  <div className="rapp-controls-mini">
+                    {rapp.status === 'active' && (
+                      <>
+                        <span className="control-icon-mini">▲</span>
+                        <span className="level-indicator-mini">{rapp.level}</span>
+                      </>
+                    )}
+                    {rapp.status === 'locked' && <span className="lock-icon-mini">🔒</span>}
+                    {rapp.status === 'unlocked' && <span className="lock-icon-mini" style={{color: '#52b788'}}>🔓</span>}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="catalogue-loading">Catalogue loading...</div>
+            )}
+          </div>
+        </div>
+        
+        {/* Floating Leaderboard Card */}
+        <div className="floating-leaderboard">
+          <div className="leaderboard-header">
+            <h4>Top Ranking</h4>
+          </div>
+          <div className="leaderboard-list-mini">
+            {topPlayers.length > 0 ? (
+              topPlayers.map((entry, index) => (
+                <div key={entry.playerId} className={`leaderboard-item-mini rank-${index + 1}`}>
+                  <div className="rank-badge">{index + 1}</div>
+                  <div className="player-avatar-mini">
+                    {entry.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="player-info-mini">
+                    <div className="player-name-mini">{entry.displayName}</div>
+                    <div className="player-score-mini">{Math.round(entry.compositeScore).toLocaleString()} pts</div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="leaderboard-loading">Waiting for data...</div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
