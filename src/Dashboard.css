@@ -1,0 +1,224 @@
+.dashboard {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "sidebar main";
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 300px 1fr;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg);
+}
+
+.dashboard-header {
+  grid-area: header;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  height: 60px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg);
+  z-index: 10;
+}
+
+.dashboard-sidebar {
+  grid-area: sidebar;
+  border-right: 1px solid var(--border);
+  background-color: #0d1b2a; /* Dark blue background from screenshot */
+  padding: 0;
+  overflow-y: auto;
+  color: white;
+}
+
+.sidebar-header {
+  padding: 15px 20px;
+  background-color: #1b263b;
+  border-bottom: 1px solid #415a77;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.catalogue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.catalogue-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  gap: 12px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.1s;
+  cursor: pointer;
+}
+
+.catalogue-item:hover {
+  transform: translateX(4px);
+}
+
+/* Item Status Colors */
+.catalogue-item.active {
+  background: linear-gradient(90deg, #1b4332 0%, #081c15 100%);
+  border-color: #2d6a4f;
+}
+
+.catalogue-item.deployed {
+  background: linear-gradient(90deg, #1e6091 0%, #184e77 100%);
+  border-color: #34a0a4;
+}
+
+.catalogue-item.unlocked {
+  background: linear-gradient(90deg, #133c3e 0%, #0b1d1e 100%);
+  border-color: #1a759f;
+}
+
+.catalogue-item.locked {
+  background: #1b263b;
+  opacity: 0.7;
+  border-color: transparent;
+}
+
+.rapp-icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 20px;
+}
+
+.rapp-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rapp-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+}
+
+.rapp-status {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.active .rapp-status {
+  color: #52b788;
+}
+
+.deployed .rapp-status {
+  color: #52b788;
+}
+
+.unlocked .rapp-status {
+  color: #94a3b8;
+}
+
+.rapp-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.control-icon {
+  font-size: 10px;
+  color: #52b788;
+}
+
+.level-indicator {
+  font-weight: bold;
+  font-size: 14px;
+  color: #52b788;
+}
+
+.lock-icon {
+  color: #64748b;
+  font-size: 16px;
+}
+
+.basestation {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background-color: white;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.basestation:hover {
+  transform: scale(1.1);
+  z-index: 5;
+}
+
+.basestation-icon {
+  font-size: 24px;
+}
+
+.basestation-name {
+  font-size: 10px;
+  font-weight: bold;
+  margin-top: 2px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.metrics-bar {
+  width: 80%;
+  height: 4px;
+  background-color: #eee;
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.metrics-fill {
+  height: 100%;
+  background-color: #4caf50;
+  transition: width 0.3s;
+}
+
+.player-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-weight: bold;
+  color: var(--text-h);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text);
+}
