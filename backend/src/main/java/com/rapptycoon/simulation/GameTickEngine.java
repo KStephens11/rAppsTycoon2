@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -46,6 +47,8 @@ public class GameTickEngine {
     private final GameProperties gameProperties;
     private final WebSocketBroadcaster broadcaster;
 
+    private final GameTickEngine self;
+
     public GameTickEngine(GameSessionRepository gameSessionRepository,
                           RappDeploymentRepository rappDeploymentRepository,
                           GameEventRepository gameEventRepository,
@@ -59,7 +62,8 @@ public class GameTickEngine {
                           GameSessionService gameSessionService,
                           RappService rappService,
                           GameProperties gameProperties,
-                          WebSocketBroadcaster broadcaster) {
+                          WebSocketBroadcaster broadcaster,
+                          @Lazy GameTickEngine self) {
         this.gameSessionRepository = gameSessionRepository;
         this.rappDeploymentRepository = rappDeploymentRepository;
         this.gameEventRepository = gameEventRepository;
@@ -74,6 +78,7 @@ public class GameTickEngine {
         this.rappService = rappService;
         this.gameProperties = gameProperties;
         this.broadcaster = broadcaster;
+        this.self = self;
     }
 
     @Scheduled(fixedDelayString = "${game.tick.interval}")
@@ -81,7 +86,7 @@ public class GameTickEngine {
         List<GameSession> activeSessions = gameSessionRepository.findByState(GameSessionState.ACTIVE);
         for (GameSession session : activeSessions) {
             try {
-                processTick(session);
+                self.processTick(session);
             } catch (Exception e) {
                 log.error("Error processing tick for session {}: {}", session.getSessionCode(), e.getMessage(), e);
             }

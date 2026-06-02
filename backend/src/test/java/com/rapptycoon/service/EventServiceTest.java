@@ -96,7 +96,6 @@ class EventServiceTest {
     @DisplayName("createEvent creates event with correct fields")
     void createEvent_createsWithCorrectFields() {
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(activeSession));
-        when(basestationRepository.findById(1L)).thenReturn(Optional.of(basestation));
         when(gameEventRepository.save(any(GameEvent.class))).thenAnswer(invocation -> {
             GameEvent event = invocation.getArgument(0);
             event.setId(5L);

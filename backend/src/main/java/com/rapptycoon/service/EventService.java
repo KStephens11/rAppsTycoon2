@@ -18,17 +18,19 @@ import java.util.*;
 public class EventService {
 
     private static final BigDecimal AUTO_RESOLVE_DAMAGE = new BigDecimal("-10.00");
-
+    private static final String TRAFFIC_BALANCER="Traffic Balancer";
+    private static final String CAPACITY_OPTIMISER="Capacity Optimiser";
+    private static final String EVENT_NOT_FOUND="Event not found: ";
     /**
      * Maps event types to the rApp template names that can resolve them.
      */
     private static final Map<String, List<String>> EVENT_RAPP_EFFECTIVENESS = Map.of(
             "POWER_OUTAGE", List.of("Energy Saver", "Fault Predictor"),
-            "TRAFFIC_SPIKE", List.of("Capacity Optimiser", "Traffic Balancer"),
+            "TRAFFIC_SPIKE", List.of(CAPACITY_OPTIMISER, TRAFFIC_BALANCER),
             "HARDWARE_FAILURE", List.of("Fault Predictor", "Configuration Drift Detector"),
-            "SLA_BREACH", List.of("SLA Guardian", "Capacity Optimiser"),
-            "INTERFERENCE", List.of("Traffic Balancer", "Alarm Noise Reducer"),
-            "CAPACITY_OVERFLOW", List.of("Capacity Optimiser", "Traffic Balancer")
+            "SLA_BREACH", List.of("SLA Guardian", CAPACITY_OPTIMISER),
+            "INTERFERENCE", List.of(TRAFFIC_BALANCER, "Alarm Noise Reducer"),
+            "CAPACITY_OVERFLOW", List.of(CAPACITY_OPTIMISER, TRAFFIC_BALANCER)
     );
 
     private final GameEventRepository gameEventRepository;
@@ -65,9 +67,6 @@ public class EventService {
             throw new InvalidStateException("Session is not active");
         }
 
-        Basestation basestation = basestationRepository.findById(basestationId)
-                .orElseThrow(() -> new EntityNotFoundException("Basestation not found: " + basestationId));
-
         GameEvent event = GameEvent.builder()
                 .sessionId(session.getId())
                 .basestationId(basestationId)
@@ -95,7 +94,7 @@ public class EventService {
     @Transactional
     public GameEvent resolveEvent(Long eventId) {
         GameEvent event = gameEventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND + eventId));
 
         event.setResolved(true);
         event.setResolvedAt(LocalDateTime.now());
@@ -109,7 +108,7 @@ public class EventService {
     @Transactional
     public GameEvent escalateEvent(Long eventId) {
         GameEvent event = gameEventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND + eventId));
 
         if (event.isResolved()) {
             throw new InvalidStateException("Cannot escalate a resolved event");
@@ -135,7 +134,7 @@ public class EventService {
     @Transactional
     public boolean checkAutoResolve(Long eventId) {
         GameEvent event = gameEventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND + eventId));
 
         int maxLevel = gameProperties.getEscalation().getMaxLevel();
         int autoResolveAfter = gameProperties.getEscalation().getAutoResolveAfter();

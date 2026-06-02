@@ -215,7 +215,7 @@ public class GameSessionService {
                 return code;
             }
         }
-        throw new RuntimeException("Failed to generate unique session code after " + MAX_CODE_GENERATION_ATTEMPTS + " attempts");
+        throw new IllegalStateException("Failed to generate unique session code after " + MAX_CODE_GENERATION_ATTEMPTS + " attempts");
     }
 
     private String generateSessionCode() {
