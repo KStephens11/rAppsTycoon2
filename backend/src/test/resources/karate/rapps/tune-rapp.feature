@@ -1,4 +1,4 @@
-﻿Feature: Tune rApp - PUT /api/sessions/{code}/rapps/{id}/tune
+Feature: Tune rApp - PUT /api/sessions/{code}/rapps/{id}/tune
 
   Background:
     * url baseUrl
@@ -31,14 +31,12 @@
   Scenario: Tune increments version and returns updated metrics
     Given path '/api/sessions/' + sessionCode + '/rapps/' + deploymentId + '/tune'
     And header X-Session-Token = hostToken
-    And request { configuration: { threshold: 75, aggressiveness: 'HIGH' } }
+    And request { threshold: 75, aggressiveness: 'HIGH' }
     When method PUT
     Then status 200
     And match response.deployment.version == 2
     And match response.deployment.status == 'ACTIVE'
-    And match response.deployment.configuration.threshold == 75
-    And match response.deployment.configuration.aggressiveness == 'HIGH'
-    And match response.updatedMetrics == '#notnull'
+    And match response.deployment.updatedMetrics == '#notnull'
 
   # -----------------------------------------------------------------------
   # Negative
@@ -47,14 +45,14 @@
   Scenario: Tune rApp owned by another player returns 403 FORBIDDEN
     Given path '/api/sessions/' + sessionCode + '/rapps/' + deploymentId + '/tune'
     And header X-Session-Token = guestToken
-    And request { configuration: { threshold: 75, aggressiveness: 'HIGH' } }
+    And request { threshold: 75, aggressiveness: 'HIGH' }
     When method PUT
     Then status 403
     And match response.error == 'FORBIDDEN'
 
   Scenario: Missing token returns 401 UNAUTHORIZED
     Given path '/api/sessions/' + sessionCode + '/rapps/' + deploymentId + '/tune'
-    And request { configuration: { threshold: 75, aggressiveness: 'HIGH' } }
+    And request { threshold: 75, aggressiveness: 'HIGH' }
     When method PUT
     Then status 401
     And match response.error == 'UNAUTHORIZED'

@@ -1,4 +1,4 @@
-﻿Feature: Health Endpoints - Actuator probes
+Feature: Health Endpoints - Actuator probes
 
   Background:
     * url baseUrl

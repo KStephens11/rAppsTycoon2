@@ -1,4 +1,4 @@
-﻿Feature: Deploy rApp - POST /api/sessions/{code}/rapps/deploy
+Feature: Deploy rApp - POST /api/sessions/{code}/rapps/deploy
 
   Background:
     * url baseUrl

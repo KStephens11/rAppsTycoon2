@@ -1,4 +1,4 @@
-﻿# Reusable helper: creates a session with 2 players and starts the game.
+# Reusable helper: creates a session with 2 players and starts the game.
 # Exposes: sessionCode, hostToken, guestToken, hostPlayerId, guestPlayerId
 # After start, basestationId is the first basestation of the host player.
 

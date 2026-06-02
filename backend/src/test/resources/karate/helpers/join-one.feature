@@ -1,4 +1,4 @@
-﻿@ignore
+@ignore
 Feature: join one player helper
   Scenario:
     Given url baseUrl

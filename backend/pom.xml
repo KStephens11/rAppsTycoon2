@@ -71,7 +71,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Jackson Databind (included with web starter, explicit for clarity) -->
+        <!-- Jackson Databind (included with web starter) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -95,27 +95,8 @@
         <dependency>
             <groupId>com.intuit.karate</groupId>
             <artifactId>karate-junit5</artifactId>
-            <version>1.4.1</version>
+            <version>1.4.0</version>
             <scope>test</scope>
-            <exclusions>
-                <!-- Exclude GraalVM JS engine (not needed for HTTP feature tests) -->
-                <exclusion>
-                    <groupId>org.graalvm.js</groupId>
-                    <artifactId>js</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.graalvm.truffle</groupId>
-                    <artifactId>truffle-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.graalvm.sdk</groupId>
-                    <artifactId>graal-sdk</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.linecorp.armeria</groupId>
-                    <artifactId>armeria</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
     </dependencies>
 
@@ -171,7 +152,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <excludedGroups>e2e</excludedGroups>
-                    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                    <argLine>-XX:+EnableDynamicAgentLoading --add-opens=java.base/sun.misc=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
 
@@ -182,7 +163,7 @@
                     <includes>
                         <include>**/KarateRunner.java</include>
                     </includes>
-                    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                    <argLine>-XX:+EnableDynamicAgentLoading --add-opens=java.base/sun.misc=ALL-UNNAMED</argLine>
                 </configuration>
                 <executions>
                     <execution>

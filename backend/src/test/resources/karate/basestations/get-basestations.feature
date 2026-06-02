@@ -1,4 +1,4 @@
-﻿Feature: Get Player Basestations - GET /api/sessions/{code}/basestations
+Feature: Get Player Basestations - GET /api/sessions/{code}/basestations
 
   Background:
     * url baseUrl

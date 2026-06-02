@@ -1,4 +1,4 @@
-﻿Feature: Create Game Session - POST /api/sessions
+Feature: Create Game Session - POST /api/sessions
 
   Background:
     * url baseUrl

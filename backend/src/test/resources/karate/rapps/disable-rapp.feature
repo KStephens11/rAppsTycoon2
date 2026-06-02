@@ -1,4 +1,4 @@
-﻿Feature: Disable rApp - PUT /api/sessions/{code}/rapps/{id}/disable
+Feature: Disable rApp - PUT /api/sessions/{code}/rapps/{id}/disable
 
   Background:
     * url baseUrl
@@ -33,7 +33,7 @@
     When method PUT
     Then status 200
     And match response.deployment.status == 'DISABLED'
-    And match response.updatedMetrics == '#notnull'
+    And match response.deployment.updatedMetrics == '#notnull'
 
   Scenario: Disable reverses rApp metric impact
     # Get metrics before disable
@@ -48,7 +48,7 @@
     When method PUT
     Then status 200
     # Energy Saver boosts energyEfficiency — disabling should reduce it
-    And assert response.updatedMetrics.energyEfficiency < metricsBefore
+    And assert response.deployment.updatedMetrics.energyEfficiency < metricsBefore
 
   # -----------------------------------------------------------------------
   # Negative

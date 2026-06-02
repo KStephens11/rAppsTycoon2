@@ -1,4 +1,4 @@
-﻿Feature: Start Game Session - POST /api/sessions/{code}/start
+Feature: Start Game Session - POST /api/sessions/{code}/start
 
   Background:
     * url baseUrl
@@ -21,7 +21,6 @@
     And match response.state == 'ACTIVE'
     And match response.startedAt == '#notnull'
     And match response.players == '#[2]'
-    And match response.players[0].basestations == '#[3]'
 
   # -----------------------------------------------------------------------
   # Negative

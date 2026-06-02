@@ -1,4 +1,4 @@
-﻿Feature: Get Session State - GET /api/sessions/{code}
+Feature: Get Session State - GET /api/sessions/{code}
 
   Background:
     * url baseUrl

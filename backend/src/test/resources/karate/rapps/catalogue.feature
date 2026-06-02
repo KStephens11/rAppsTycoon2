@@ -1,4 +1,4 @@
-﻿Feature: rApp Catalogue - GET /api/rapps/catalogue
+Feature: rApp Catalogue - GET /api/rapps/catalogue
 
   Background:
     * url baseUrl

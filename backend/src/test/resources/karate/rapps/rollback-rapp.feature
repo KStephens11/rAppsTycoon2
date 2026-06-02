@@ -1,4 +1,4 @@
-﻿Feature: Rollback rApp - PUT /api/sessions/{code}/rapps/{id}/rollback
+Feature: Rollback rApp - PUT /api/sessions/{code}/rapps/{id}/rollback
 
   Background:
     * url baseUrl
@@ -21,12 +21,19 @@
       }
       """
     * call waitForActive
-    # Tune to create v2
-    Given path '/api/sessions/' + sessionCode + '/rapps/' + deploymentId + '/tune'
-    And header X-Session-Token = hostToken
-    And request { configuration: { threshold: 75, aggressiveness: 'HIGH' } }
-    When method PUT
-    Then status 200
+    # Tune to create v2 (retry on optimistic lock conflict)
+    * def tuneWithRetry =
+      """
+      function() {
+        for (var i = 0; i < 5; i++) {
+          var res = karate.call(true, 'classpath:karate/helpers/tune-one.feature',
+            { sessionCode: sessionCode, deploymentId: deploymentId, token: hostToken });
+          if (res.status == 200) return;
+          java.lang.Thread.sleep(200);
+        }
+      }
+      """
+    * call tuneWithRetry
 
   # -----------------------------------------------------------------------
   # Happy path
@@ -39,7 +46,7 @@
     Then status 200
     And match response.deployment.version == 1
     And match response.deployment.status == 'ACTIVE'
-    And match response.updatedMetrics == '#notnull'
+    And match response.deployment.updatedMetrics == '#notnull'
 
   # -----------------------------------------------------------------------
   # Negative

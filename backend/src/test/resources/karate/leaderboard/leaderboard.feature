@@ -1,4 +1,4 @@
-﻿Feature: Leaderboard - GET /api/sessions/{code}/leaderboard
+Feature: Leaderboard - GET /api/sessions/{code}/leaderboard
 
   Background:
     * url baseUrl

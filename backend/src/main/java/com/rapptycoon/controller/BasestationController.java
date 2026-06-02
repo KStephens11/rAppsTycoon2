@@ -3,9 +3,11 @@ package com.rapptycoon.controller;
 import com.rapptycoon.dto.BasestationResponse;
 import com.rapptycoon.dto.BasestationStateDto;
 import com.rapptycoon.exception.ForbiddenException;
+import com.rapptycoon.exception.InvalidStateException;
 import com.rapptycoon.exception.SessionNotFoundException;
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.model.GameSession;
+import com.rapptycoon.model.GameSessionState;
 import com.rapptycoon.model.Player;
 import com.rapptycoon.repository.GameSessionRepository;
 import com.rapptycoon.service.BasestationService;
@@ -45,6 +47,9 @@ public class BasestationController {
                 .orElseThrow(() -> new SessionNotFoundException(code));
         if (!player.getSessionId().equals(session.getId())) {
             throw new ForbiddenException("Player is not a member of this session");
+        }
+        if (session.getState() == GameSessionState.LOBBY) {
+            throw new InvalidStateException("Game has not started yet");
         }
 
         List<BasestationStateDto> basestations = basestationService.getPlayerBasestations(player.getId());

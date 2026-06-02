@@ -1,4 +1,4 @@
-﻿Feature: Join Game Session - POST /api/sessions/{code}/join
+Feature: Join Game Session - POST /api/sessions/{code}/join
 
   Background:
     * url baseUrl

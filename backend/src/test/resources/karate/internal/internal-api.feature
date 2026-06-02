@@ -1,4 +1,4 @@
-﻿Feature: Internal API - Event Generator Endpoints
+Feature: Internal API - Event Generator Endpoints
 
   Background:
     * url baseUrl

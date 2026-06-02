@@ -1,4 +1,4 @@
-﻿@ignore
+@ignore
 Feature: get deployment status helper
   Scenario:
     Given url baseUrl
