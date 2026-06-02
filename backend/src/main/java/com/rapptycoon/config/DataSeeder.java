@@ -13,6 +13,7 @@ import java.util.List;
 @Component
 public class DataSeeder implements CommandLineRunner {
 
+
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     private final RappTemplateRepository rappTemplateRepository;
