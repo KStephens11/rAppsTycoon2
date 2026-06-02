@@ -24,7 +24,7 @@ game:
     min: 2
     max: 6
   basestations:
-    per-player: 3
+    per-player: 4
   score:
     weight:
       money: 0.10

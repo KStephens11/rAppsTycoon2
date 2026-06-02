@@ -275,7 +275,7 @@ export function IsometricMap({ basestations, selectedBasestationId, onSelectBase
           maxZoom={150}
         />
 
-        <MapEnvironment />
+        <MapEnvironment basestationPositions={positions} />
 
         {/* Project selected basestation position to screen coordinates */}
         <ScreenPositionTracker

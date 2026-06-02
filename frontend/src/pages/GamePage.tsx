@@ -478,13 +478,6 @@ function GamePageInner() {
             </div>
           </div>
 
-          {/* Region label */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-text bg-surface/85 backdrop-blur-sm px-3 py-1 rounded border border-surface-lighter shadow">
-              {displayedBasestation ? displayedBasestation.name : 'Network Region'}
-            </span>
-          </div>
-
           {/* Legend */}
           <div className="absolute top-2 right-2 z-10 flex items-center gap-3 bg-surface/85 backdrop-blur-sm px-3 py-1.5 rounded border border-surface-lighter shadow">
             <LegendDot color="bg-emerald-400" label="Active" />
