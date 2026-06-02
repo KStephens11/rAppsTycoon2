@@ -367,14 +367,6 @@ function GamePageInner() {
     return [...restEvents, ...rtEvents.filter((e) => !restIds.has(e.id))];
   }, [basestations, realTimeState.events]);
 
-  // Name label for the region overlay — use selected basestation, fall back to first
-  const displayedBasestationName = useMemo(
-    () => mergedBasestations.find((bs) => bs.id === selectedBasestationId)?.name
-       ?? mergedBasestations[0]?.name
-       ?? 'Network Region',
-    [mergedBasestations, selectedBasestationId],
-  );
-
   const currentPlayerName = useMemo(
     () => players.find((p) => p.id === playerId)?.displayName ?? 'Player',
     [players, playerId],
