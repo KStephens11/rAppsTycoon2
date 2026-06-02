@@ -1,18 +1,19 @@
+FROM python:3.11-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
 FROM python:3.11-slim
 
-# Create non-root user
+# Create non-root user for security
 RUN useradd -m -u 1000 appuser
 
 WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY *.py .
 
-# Copy and install dependencies first (layer cache friendly)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONUNBUFFERED=1
 
-# Copy application code
-COPY . .
-
-# Switch to non-root user
 USER appuser
 
-CMD ["python", "main.py"]
+ENTRYPOINT ["python", "main.py"]
