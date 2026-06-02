@@ -6,6 +6,7 @@ pipeline {
         DOCKER_HOST = 'tcp://localhost:2375'
         IMAGE_BACKEND = "rapp-backend:${BUILD_NUMBER}"
         IMAGE_EVENT_GENERATOR = "rapp-event-generator:${BUILD_NUMBER}"
+        IMAGE_FRONTEND = "rapp-tycoon-frontend:${BUILD_NUMBER}"
     }
 
     stages {
@@ -46,6 +47,7 @@ pipeline {
             steps {
                 sh "docker build -t ${IMAGE_BACKEND} ./backend"
                 sh "docker build -t ${IMAGE_EVENT_GENERATOR} ./event-generator"
+                sh "docker build -f frontend.Dockerfile -t ${IMAGE_FRONTEND} ."
             }
         }
 
@@ -56,8 +58,10 @@ pipeline {
             steps {
                 sh "kubectl set image deployment/backend backend=${IMAGE_BACKEND}"
                 sh "kubectl set image deployment/event-generator event-generator=${IMAGE_EVENT_GENERATOR}"
+                sh "kubectl set image deployment/frontend frontend=${IMAGE_FRONTEND}"
                 sh "kubectl rollout status deployment/backend"
                 sh "kubectl rollout status deployment/event-generator"
+                sh "kubectl rollout status deployment/frontend"
             }
         }
     }

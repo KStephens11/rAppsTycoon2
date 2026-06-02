@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: rapp-tycoon-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rapp-tycoon-frontend
+  template:
+    metadata:
+      labels:
+        app: rapp-tycoon-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: rapp-tycoon-frontend:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"

@@ -46,5 +46,15 @@ services:
       BACKEND_BASE_URL: http://backend:8080
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: rapp-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
   mysql_data:

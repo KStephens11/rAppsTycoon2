@@ -28,22 +28,25 @@ The default `.env` values work out of the box for local development. No changes 
 docker compose up --build
 ```
 
-Services start in order: MySQL → Backend → Event Generator.
+Services start in order: MySQL → Backend → Event Generator → Frontend.
 
 **3. Verify**
 ```bash
 docker compose ps
 ```
 
-All three services should be running:
+All four services should be running:
 - `rapp-mysql` — `healthy`
 - `rapp-backend` — `healthy`
 - `rapp-event-generator` — `Up`
+- `rapp-frontend` — `Up`
 
 Backend health check:
 ```bash
 curl http://localhost:8080/actuator/health
 ```
+
+Frontend: http://localhost:3000
 
 ## Environment Variables
 
@@ -59,6 +62,7 @@ curl http://localhost:8080/actuator/health
 
 | Service | Port | Description |
 |---------|------|-------------|
+| Frontend | `3000` | React app served via Nginx |
 | Backend API | `8080` | Spring Boot REST API + WebSocket |
 | MySQL | `3307` | Database (mapped from internal 3306) |
 
@@ -86,3 +90,26 @@ Base URL: `http://localhost:8080`
 | Containerisation | Docker |
 | Orchestration | Kubernetes (see `k8s/`) |
 | CI | GitHub Actions + SonarCloud |
+
+## Kubernetes (Local)
+
+**1. Build the frontend image**
+```bash
+docker build -f frontend.Dockerfile -t rapp-tycoon-frontend:latest .
+```
+
+**2. Apply all manifests**
+```bash
+kubectl apply -f k8s/
+```
+
+**3. Verify pods are running**
+```bash
+kubectl get pods
+```
+
+**4. Access the frontend**
+```bash
+kubectl port-forward service/frontend 3000:80
+```
+Then open http://localhost:3000 in your browser.
