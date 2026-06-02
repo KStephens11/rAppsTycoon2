@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { IMessage, StompSubscription } from '@stomp/stompjs';
 import { useGame } from '../context/GameContext';
@@ -29,22 +29,20 @@ export function useGameSubscriptions(
 
   // Store all mutable references in refs to avoid effect re-runs
   const callbacksRef = useRef<GameSubscriptionCallbacks | undefined>(callbacks);
-  callbacksRef.current = callbacks;
-
   const gameStateRef = useRef(gameState);
-  gameStateRef.current = gameState;
-
   const wsRef = useRef(ws);
-  wsRef.current = ws;
-
   const setGameStateRef = useRef(setGameState);
-  setGameStateRef.current = setGameState;
-
   const setContextFinalLeaderboardRef = useRef(setContextFinalLeaderboard);
-  setContextFinalLeaderboardRef.current = setContextFinalLeaderboard;
-
   const navigateRef = useRef(navigate);
-  navigateRef.current = navigate;
+
+  useLayoutEffect(() => {
+    callbacksRef.current = callbacks;
+    gameStateRef.current = gameState;
+    wsRef.current = ws;
+    setGameStateRef.current = setGameState;
+    setContextFinalLeaderboardRef.current = setContextFinalLeaderboard;
+    navigateRef.current = navigate;
+  });
 
   useEffect(() => {
     if (!ws.connected || !sessionCode || !playerId) return;
@@ -99,8 +97,14 @@ export function useGameSubscriptions(
               compositeScore: number;
               scores: { money: number; customerSatisfaction: number; networkStability: number };
             }>;
+            currentTick?: number;
+            totalTicks?: number;
           };
-          gameStateRef.current.updateLeaderboard({ leaderboard: payload.leaderboard });
+          gameStateRef.current.updateLeaderboard({
+            leaderboard: payload.leaderboard,
+            currentTick: payload.currentTick ?? 0,
+            totalTicks: payload.totalTicks ?? 60,
+          });
         }
       },
     );

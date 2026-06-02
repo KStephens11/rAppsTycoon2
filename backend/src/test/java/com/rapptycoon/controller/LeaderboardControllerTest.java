@@ -63,7 +63,7 @@ class LeaderboardControllerTest {
                                 new ScoreDto(new BigDecimal("720.00"), new BigDecimal("85.00"), new BigDecimal("82.50")),
                                 new BigDecimal("274.63"))
                 ),
-                "ACTIVE"
+                "ACTIVE", 10, 60
         );
 
         when(playerService.validateToken(VALID_TOKEN)).thenReturn(player);

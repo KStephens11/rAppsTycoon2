@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
-import { Radio, User, TrendingUp, TrendingDown, AlertTriangle, Settings, MoreHorizontal } from 'lucide-react';
+import { Radio, User, AlertTriangle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useGameState, type GameEvent } from '../hooks/useGameState';
@@ -12,6 +12,7 @@ import { ToastContainer, type ToastMessage } from '../components/ui/Toast';
 import { EventAlertContainer, useEventAlerts } from '../components/game/EventAlert';
 import { EventPanel, type ActiveEvent } from '../components/game/EventPanel';
 import { Leaderboard } from '../components/game/Leaderboard';
+import { GameTimer } from '../components/game/GameTimer';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { ExpandableSection } from '../components/ui/ExpandableSection';
@@ -80,44 +81,6 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   );
 }
 
-interface MetricCardProps {
-  index: number;
-  label: string;
-  value: number;
-  isCost?: boolean;
-}
-
-function getMetricStatus(value: number, isCost: boolean): { label: string; color: string; arrow: 'up' | 'down' } {
-  if (isCost) {
-    if (value > 70) return { label: 'Red/High', color: 'text-red-400', arrow: 'up' };
-    if (value > 40) return { label: 'Yellow/Mid', color: 'text-amber-400', arrow: 'up' };
-    return { label: 'Green/Low', color: 'text-emerald-400', arrow: 'down' };
-  }
-  if (value >= 70) return { label: 'Green/Up', color: 'text-emerald-400', arrow: 'up' };
-  if (value >= 40) return { label: 'Yellow/Mid', color: 'text-amber-400', arrow: 'up' };
-  return { label: 'Red/Down', color: 'text-red-400', arrow: 'down' };
-}
-
-function MetricCard({ index, label, value, isCost = false }: MetricCardProps) {
-  const status = getMetricStatus(value, isCost);
-  const Arrow = status.arrow === 'up' ? TrendingUp : TrendingDown;
-  const displayValue = isCost ? `€${value.toFixed(1)}` : `${value.toFixed(0)}%`;
-
-  return (
-    <div className="flex-shrink-0 flex flex-col gap-1 px-3 py-2 rounded-lg bg-surface-light border border-surface-lighter min-w-[100px]">
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] text-text-muted font-medium">{index}.</span>
-        <span className="text-[10px] text-text-muted truncate">{label}</span>
-      </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-base font-bold text-text tabular-nums leading-none">{displayValue}</span>
-        <Arrow size={12} className={status.color} />
-      </div>
-      <span className={`text-[10px] font-medium ${status.color}`}>{status.label}</span>
-    </div>
-  );
-}
-
 // ---
 
 export function GamePage() {
@@ -140,6 +103,8 @@ function GamePageInner() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [popoverAnchor, setPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const [rapps, setRapps] = useState<RappTemplate[]>([]);
+  const [gameStartedAt, setGameStartedAt] = useState<string | null>(null);
+  const [gameTotalSeconds, setGameTotalSeconds] = useState<number>(300);
 
   const [tuneModalOpen, setTuneModalOpen] = useState(false);
   const [tuneTarget, setTuneTarget] = useState<{
@@ -222,6 +187,27 @@ function GamePageInner() {
   }, [sessionCode, token]);
 
   useEffect(() => { fetchBasestations(); }, [fetchBasestations]);
+
+  // On mount (including page refresh) fetch the session to get startedAt so
+  // the timer counts down from the real game-start time, not from zero.
+  useEffect(() => {
+    if (!sessionCode || !token || gameState !== 'active') return;
+    apiGet<{ startedAt: string | null; totalTicks?: number }>(
+      `/api/sessions/${sessionCode}`,
+      token,
+    )
+      .then((data) => {
+        if (data.startedAt) {
+          setGameStartedAt(data.startedAt);
+        }
+        if (data.totalTicks) {
+          setGameTotalSeconds(data.totalTicks * 5); // 5 s per tick
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch session:', err);
+      });
+  }, [sessionCode, token, gameState]);
 
   // Refetch when WebSocket connects/reconnects to catch missed events
   useEffect(() => {
@@ -381,41 +367,13 @@ function GamePageInner() {
     return [...restEvents, ...rtEvents.filter((e) => !restIds.has(e.id))];
   }, [basestations, realTimeState.events]);
 
-  // Metrics for the bottom bar — use selected basestation, fall back to first
-  const displayedBasestation = useMemo(
-    () => mergedBasestations.find((bs) => bs.id === selectedBasestationId) ?? mergedBasestations[0],
+  // Name label for the region overlay — use selected basestation, fall back to first
+  const displayedBasestationName = useMemo(
+    () => mergedBasestations.find((bs) => bs.id === selectedBasestationId)?.name
+       ?? mergedBasestations[0]?.name
+       ?? 'Network Region',
     [mergedBasestations, selectedBasestationId],
   );
-
-  const metricCards = displayedBasestation ? [
-    { label: 'Network Health',    value: displayedBasestation.metrics.health,               isCost: false },
-    { label: 'Customer Satis.',   value: displayedBasestation.metrics.customerExperience,   isCost: false },
-    { label: 'Energy Efficiency', value: displayedBasestation.metrics.energyEfficiency,     isCost: false },
-    { label: 'Auto. Reliability', value: displayedBasestation.metrics.automationReliability, isCost: false },
-    { label: 'SLA Compliance',    value: displayedBasestation.metrics.slaCompliance,        isCost: false },
-    { label: 'Operating Cost',    value: displayedBasestation.metrics.cost,                 isCost: true  },
-  ] : [];
-
-  // Quick-action helpers for bottom bar buttons
-  const firstActiveRapp = selectedBasestation?.deployedRapps.find((r) => r.status === 'ACTIVE');
-
-  const handleQuickRollback = useCallback(() => {
-    if (firstActiveRapp) handleRollback(firstActiveRapp.id);
-    else addToast('Select a basestation with an active rApp first', 'info');
-  }, [firstActiveRapp, handleRollback, addToast]);
-
-  const handleQuickTune = useCallback(() => {
-    if (firstActiveRapp) {
-      handleTune(
-        firstActiveRapp.id,
-        firstActiveRapp.name,
-        firstActiveRapp.configuration?.threshold,
-        firstActiveRapp.configuration?.aggressiveness,
-      );
-    } else {
-      addToast('Select a basestation with an active rApp first', 'info');
-    }
-  }, [firstActiveRapp, handleTune, addToast]);
 
   const currentPlayerName = useMemo(
     () => players.find((p) => p.id === playerId)?.displayName ?? 'Player',
@@ -448,6 +406,14 @@ function GamePageInner() {
 
         <div className="flex-1" />
 
+        {/* Game timer */}
+        {gameState === 'active' && gameStartedAt && (
+          <GameTimer
+            startedAt={gameStartedAt}
+            totalDurationSeconds={gameTotalSeconds}
+          />
+        )}
+
         {/* Settings + player */}
         <SettingsToolbar />
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-light border border-surface-lighter">
@@ -463,8 +429,8 @@ function GamePageInner() {
 
         {/* Center — Map (full width, catalog and overlays float on top) */}
         <div className="flex-1 relative min-w-0 min-h-0">
-          {/* Floating rApp Catalog — left side */}
-          <div className="absolute top-3 left-3 z-10 w-60 hidden md:flex flex-col bg-surface/90 backdrop-blur-sm border border-surface-lighter/60 rounded-lg shadow-lg overflow-hidden max-h-[calc(100%-1.5rem)]">
+          {/* Floating rApp Catalog — left side, full map height */}
+          <div className="absolute top-3 bottom-3 left-3 z-10 w-60 hidden md:flex flex-col bg-surface/90 backdrop-blur-sm border border-surface-lighter/60 rounded-lg shadow-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-surface-lighter/60 shrink-0">
               <h2 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
                 rAPP Catalog
@@ -481,7 +447,7 @@ function GamePageInner() {
           {/* Region label */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
             <span className="text-[11px] font-bold uppercase tracking-widest text-text bg-surface/85 backdrop-blur-sm px-3 py-1 rounded border border-surface-lighter shadow">
-              {displayedBasestation ? displayedBasestation.name : 'Network Region'}
+              {displayedBasestationName}
             </span>
           </div>
 
@@ -532,80 +498,22 @@ function GamePageInner() {
         </div>
       </div>
 
-      {/* ── Bottom bar ── */}
-      <div className="hidden md:flex h-56 border-t border-surface-lighter shrink-0">
-
-        {/* Left: Network Metrics */}
-        <div className="flex-1 flex flex-col bg-surface border-r border-surface-lighter overflow-hidden">
-          <div className="px-3 py-2 border-b border-surface-lighter flex items-center justify-between">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-              Network Metrics
-              {displayedBasestation && (
-                <span className="ml-2 font-normal normal-case text-text-muted/70">
-                  — {displayedBasestation.name}
-                </span>
-              )}
-            </h3>
-            <div className="flex items-center gap-1 text-text-muted">
-              <Settings size={12} />
-              <MoreHorizontal size={12} />
-            </div>
-          </div>
-
-          <div className="flex-1 flex items-center gap-2 px-3 overflow-x-auto py-2">
-            {metricCards.map((m, i) => (
-              <MetricCard key={m.label} index={i + 1} label={m.label} value={m.value} isCost={m.isCost} />
-            ))}
-            {metricCards.length === 0 && (
-              <span className="text-xs text-text-muted">Loading metrics…</span>
-            )}
-          </div>
-
-          <div className="px-3 py-1.5 border-t border-surface-lighter flex items-center gap-2">
+      {/* ── Bottom bar — Live Incident Feed (full width) ── */}
+      <div className="hidden md:flex h-52 border-t border-surface-lighter shrink-0 bg-surface">
+        <div className="flex flex-col w-full overflow-hidden">
+          <div className="px-4 py-2 border-b border-surface-lighter flex items-center gap-2 shrink-0">
             <AlertTriangle size={11} className={combinedActiveEvents.length > 0 ? 'text-warning' : 'text-text-muted'} />
-            <span className={`text-[10px] font-medium ${combinedActiveEvents.length > 0 ? 'text-warning' : 'text-text-muted'}`}>
-              ALERTS ({combinedActiveEvents.length} Active)
-            </span>
-          </div>
-        </div>
-
-        {/* Right: Live Incident Feed */}
-        <div className="w-[420px] flex flex-col bg-surface shrink-0">
-          <div className="px-3 py-2 border-b border-surface-lighter">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
               Live Incident Feed
             </h3>
+            {combinedActiveEvents.length > 0 && (
+              <span className="text-[10px] font-medium text-warning">
+                ({combinedActiveEvents.length} active)
+              </span>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto px-2 py-2">
+          <div className="flex-1 overflow-y-auto px-4 py-2">
             <MemoizedEventPanel events={combinedActiveEvents} />
-          </div>
-          {/* Action buttons */}
-          <div className="flex gap-1.5 px-2 py-2 border-t border-surface-lighter">
-            <button
-              onClick={handleQuickRollback}
-              className="flex-1 px-2 py-1.5 text-[10px] font-semibold rounded bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 transition-colors truncate"
-            >
-              Roll Back App
-            </button>
-            <button
-              onClick={handleQuickTune}
-              className="flex-1 px-2 py-1.5 text-[10px] font-semibold rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors truncate"
-            >
-              Tune Settings
-            </button>
-            <button
-              onClick={() => {}}
-              className="flex-1 px-2 py-1.5 text-[10px] font-semibold rounded bg-surface-light text-text-muted border border-surface-lighter hover:text-text transition-colors truncate"
-            >
-              View Incidents
-            </button>
-            <button
-              disabled
-              className="flex-1 px-2 py-1.5 text-[10px] font-semibold rounded bg-surface-light text-text-muted/40 border border-surface-lighter truncate cursor-not-allowed"
-              title="Coming soon"
-            >
-              Game Chat
-            </button>
           </div>
         </div>
       </div>
