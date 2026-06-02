@@ -226,7 +226,7 @@ describe('Mobile responsive behaviour', () => {
       await screen.findAllByText('Energy Saver');
 
       // The right panel has 'hidden md:flex' — hidden on mobile, visible on md+
-      const rightPanel = container.querySelector('.hidden.md\\:flex.w-72');
+      const rightPanel = container.querySelector('.hidden.md\\:flex.w-56') || container.querySelector('.hidden.md\\:flex.w-72');
       expect(rightPanel).toBeInTheDocument();
       expect(rightPanel).toHaveClass('hidden');
       expect(rightPanel).toHaveClass('md:flex');

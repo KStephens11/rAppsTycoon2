@@ -10,5 +10,7 @@ public record SessionResponse(
         LocalDateTime createdAt,
         LocalDateTime startedAt,
         LocalDateTime endedAt,
-        List<PlayerDto> players
+        List<PlayerDto> players,
+        int currentTick,
+        int totalTicks
 ) {}

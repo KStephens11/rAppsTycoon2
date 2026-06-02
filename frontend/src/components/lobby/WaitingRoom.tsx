@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Crown, Users, Play } from 'lucide-react';
+import { Copy, Crown, Users, Play, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useGame, type Player } from '../../context/GameContext';
 import { apiGet, apiPost, ApiError } from '../../services/api';
@@ -14,7 +14,7 @@ interface SessionResponse {
 }
 
 export function WaitingRoom() {
-  const { sessionCode, token, isHost, players, playerId, setPlayers, setGameState } = useGame();
+  const { sessionCode, token, isHost, players, playerId, setPlayers, setGameState, reset } = useGame();
   const navigate = useNavigate();
 
   // Poll session state every 2 seconds
@@ -138,6 +138,15 @@ export function WaitingRoom() {
           Waiting for the host to start the game...
         </p>
       )}
+
+      {/* Leave Lobby */}
+      <button
+        onClick={() => { reset(); navigate('/'); }}
+        className="flex items-center gap-2 text-sm text-text-muted hover:text-danger transition-colors mt-2 cursor-pointer"
+      >
+        <LogOut size={14} />
+        Leave Lobby
+      </button>
     </motion.div>
   );
 }

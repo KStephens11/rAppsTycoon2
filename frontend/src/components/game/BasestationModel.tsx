@@ -315,9 +315,16 @@ export function BasestationModel({
         <ResolutionBurst />
       )}
 
-      {/* Hover tooltip */}
+      {/* Always-visible nameplate */}
+      <Html position={[0, -0.15, 0]} center sprite occlude={false} style={{ pointerEvents: 'none' }} zIndexRange={[1, 5]}>
+        <div className="px-1.5 py-0.5 rounded bg-slate-900/80 border border-slate-700/50 whitespace-nowrap">
+          <span className="text-[9px] font-medium text-white">{name}</span>
+        </div>
+      </Html>
+
+      {/* Hover tooltip — higher z-index so it renders over nameplate */}
       {hovered && (
-        <Html position={[0, 2.0, 0]} center>
+        <Html position={[0, 2.0, 0]} center zIndexRange={[10, 20]}>
           <div className="bg-slate-900/95 border border-slate-700 rounded-lg px-3 py-2 text-center whitespace-nowrap shadow-xl">
             <p className="text-white text-sm font-semibold">{name}</p>
             <p className="text-slate-400 text-xs">
@@ -412,27 +419,24 @@ function EventRing({ severity, escalation = 0 }: { severity?: EventSeverity; esc
   const meshRef = useRef<THREE.Mesh>(null);
   const color = getSeverityColor(severity);
   const basePulseSpeed = getSeverityPulseSpeed(severity);
-  // Escalation multiplier: 0→1.0, 1→1.3, 2→1.6, 3→1.9
   const pulseSpeed = basePulseSpeed * (1 + escalation * 0.3);
-  // Ring radius grows with escalation: base 1.0, up to 1.6 at escalation 3
   const baseRadius = 1.0 + escalation * 0.2;
-  // Expansion range grows with escalation for more dramatic effect
   const expansionRange = 0.4 + escalation * 0.15;
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime() * pulseSpeed;
-      // Pulse opacity and scale
       const progress = (Math.sin(t) + 1) / 2; // 0 to 1
       const scale = (baseRadius - expansionRange * 0.5) + progress * expansionRange;
-      meshRef.current.scale.set(scale, 1, scale);
+      // Uniform scale so the ring expands evenly in all directions
+      meshRef.current.scale.setScalar(scale);
       (meshRef.current.material as THREE.MeshStandardMaterial).opacity = 0.3 + progress * 0.5;
     }
   });
 
   return (
-    <mesh ref={meshRef} position={[0, 0.25, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <torusGeometry args={[1.0, 0.04, 8, 32]} />
+    <mesh ref={meshRef} position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <torusGeometry args={[0.6, 0.03, 8, 32]} />
       <meshStandardMaterial
         color={color}
         emissive={color}

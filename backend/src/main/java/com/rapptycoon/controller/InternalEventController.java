@@ -80,9 +80,7 @@ public class InternalEventController {
         List<ActiveSessionDto> sessionDtos = activeSessions.stream()
                 .map(session -> {
                     int playerCount = playerRepository.findBySessionId(session.getId()).size();
-                    List<Long> basestationIds = basestationRepository.findByPlayerId(session.getId()).isEmpty()
-                            ? getAllBasestationIdsForSession(session.getId())
-                            : getAllBasestationIdsForSession(session.getId());
+                    List<Long> basestationIds = getAllBasestationIdsForSession(session.getId());
 
                     return new ActiveSessionDto(
                             session.getSessionCode(),

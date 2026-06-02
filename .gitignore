@@ -31,3 +31,6 @@ venv/
 
 # Docker
 .docker/
+
+# Kubernetes secrets
+k8s/secret.yaml

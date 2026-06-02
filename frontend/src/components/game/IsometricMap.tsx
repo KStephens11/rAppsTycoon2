@@ -52,10 +52,17 @@ function toWorldPosition(
   const avgX = allPositions.reduce((sum, p) => sum + p.positionX, 0) / allPositions.length;
   const avgY = allPositions.reduce((sum, p) => sum + p.positionY, 0) / allPositions.length;
 
-  // Center and scale — spread them further apart (divide by smaller number = more spread)
-  const x = ((posX - avgX) / 40);
-  const z = ((posY - avgY) / 40);
-  return [x, 0, z];
+  // Center and scale
+  const rawX = ((posX - avgX) / 40);
+  const rawZ = ((posY - avgY) / 40);
+
+  // Snap to nearest grid block center to avoid landing on roads.
+  // Grid spacing = 3, grid goes from -7.5 to 7.5, block centers at -6, -3, 0, 3, 6
+  const GRID_SPACING = 3;
+  const snappedX = Math.round(rawX / GRID_SPACING) * GRID_SPACING;
+  const snappedZ = Math.round(rawZ / GRID_SPACING) * GRID_SPACING;
+
+  return [snappedX, 0, snappedZ];
 }
 
 /**
@@ -275,7 +282,7 @@ export function IsometricMap({ basestations, selectedBasestationId, onSelectBase
           maxZoom={150}
         />
 
-        <MapEnvironment />
+        <MapEnvironment basestationPositions={positions} />
 
         {/* Project selected basestation position to screen coordinates */}
         <ScreenPositionTracker

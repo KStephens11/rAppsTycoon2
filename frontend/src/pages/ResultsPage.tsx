@@ -1,18 +1,31 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Trophy, RotateCcw, Home } from 'lucide-react';
-import { useGame } from '../context/GameContext';
+import { Crown, Trophy, Home } from 'lucide-react';
+import { useGame, type FinalLeaderboardEntry } from '../context/GameContext';
+import { apiGet } from '../services/api';
 import { Confetti } from '../components/Confetti';
 import { AnimatedScore } from '../components/AnimatedScore';
 
 export function ResultsPage() {
-  const { finalLeaderboard, reset } = useGame();
+  const { finalLeaderboard, sessionCode, token, setFinalLeaderboard, reset } = useGame();
   const navigate = useNavigate();
 
-  const handlePlayAgain = () => {
-    reset();
-    navigate('/');
-  };
+  // Fallback: if we landed here without finalLeaderboard (e.g., page refresh), fetch from API
+  useEffect(() => {
+    if (!finalLeaderboard && sessionCode && token) {
+      apiGet<{ leaderboard: FinalLeaderboardEntry[]; gameState: string }>(
+        `/api/sessions/${sessionCode}/leaderboard`,
+        token,
+      )
+        .then((data) => {
+          if (data.leaderboard && data.leaderboard.length > 0) {
+            setFinalLeaderboard(data.leaderboard);
+          }
+        })
+        .catch(() => { /* ignore — will show empty state */ });
+    }
+  }, [finalLeaderboard, sessionCode, token, setFinalLeaderboard]);
 
   const handleBackToHome = () => {
     reset();
@@ -174,15 +187,8 @@ export function ResultsPage() {
           transition={{ delay: 2.5, duration: 0.5 }}
         >
           <button
-            onClick={handlePlayAgain}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-surface font-semibold rounded-lg hover:bg-primary-dark transition-colors"
-          >
-            <RotateCcw className="w-5 h-5" />
-            Play Again
-          </button>
-          <button
             onClick={handleBackToHome}
-            className="flex items-center gap-2 px-6 py-3 bg-surface-lighter text-text font-semibold rounded-lg hover:bg-surface-light transition-colors border border-surface-lighter"
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-surface font-semibold rounded-lg hover:bg-primary-dark transition-colors"
           >
             <Home className="w-5 h-5" />
             Back to Home

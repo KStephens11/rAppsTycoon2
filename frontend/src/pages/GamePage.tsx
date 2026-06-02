@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
+import { Radio, User, AlertTriangle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useGameState, type GameEvent } from '../hooks/useGameState';
@@ -11,7 +12,7 @@ import { ToastContainer, type ToastMessage } from '../components/ui/Toast';
 import { EventAlertContainer, useEventAlerts } from '../components/game/EventAlert';
 import { EventPanel, type ActiveEvent } from '../components/game/EventPanel';
 import { Leaderboard } from '../components/game/Leaderboard';
-import { ScoreSummary } from '../components/game/ScoreSummary';
+import { GameTimer } from '../components/game/GameTimer';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { ExpandableSection } from '../components/ui/ExpandableSection';
@@ -21,10 +22,8 @@ import { DragProvider, useDrag } from '../context/DragContext';
 import { DragPreview } from '../components/game/DragPreview';
 import { BasestationPopover } from '../components/game/BasestationPopover';
 
-// Lazy-load the heavy 3D map component
 const IsometricMap = lazy(() => import('../components/game/IsometricMap'));
 
-// Memoize EventPanel and Leaderboard to avoid unnecessary re-renders
 const MemoizedEventPanel = memo(EventPanel);
 const MemoizedLeaderboard = memo(Leaderboard);
 
@@ -71,6 +70,19 @@ interface CatalogueResponse {
   rapps: RappTemplate[];
 }
 
+// --- Inline sub-components for the new layout ---
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
+      <span className="text-[11px] text-text-muted">{label}</span>
+    </div>
+  );
+}
+
+// ---
+
 export function GamePage() {
   return (
     <DragProvider>
@@ -80,7 +92,7 @@ export function GamePage() {
 }
 
 function GamePageInner() {
-  const { gameState, sessionCode, token, playerId } = useGame();
+  const { gameState, sessionCode, token, playerId, players } = useGame();
   const ws = useWebSocket();
   const realTimeState = useGameState();
   const { playDeploy, playEventAlert, playGameEnd } = useSoundEffects();
@@ -91,8 +103,9 @@ function GamePageInner() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [popoverAnchor, setPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const [rapps, setRapps] = useState<RappTemplate[]>([]);
+  const [gameStartedAt, setGameStartedAt] = useState<string | null>(null);
+  const [gameTotalSeconds, setGameTotalSeconds] = useState<number>(300);
 
-  // Tune modal state
   const [tuneModalOpen, setTuneModalOpen] = useState(false);
   const [tuneTarget, setTuneTarget] = useState<{
     id: number;
@@ -101,10 +114,8 @@ function GamePageInner() {
     aggressiveness?: string;
   } | null>(null);
 
-  // Toast state (for non-event messages: deploy success, tune success, etc.)
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Event resolution tracking — detect when events disappear from basestations
   const [resolvedBasestationIds, setResolvedBasestationIds] = useState<Set<number>>(new Set());
   const previousEventIdsRef = useRef<Map<number, Set<number>>>(new Map());
 
@@ -117,79 +128,55 @@ function GamePageInner() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Event alert state (dedicated event notifications with severity colours and icons)
   const { alerts: eventAlerts, addEventAlert, dismissEventAlert } = useEventAlerts();
 
-  // Event alert callback — triggers a dedicated EventAlert when a new event arrives via WebSocket
   const handleEventReceived = useCallback((event: GameEvent) => {
     addEventAlert(event);
     playEventAlert();
   }, [addEventAlert, playEventAlert]);
 
-  // Set up subscriptions that route messages to game state
   const subscriptionCallbacks = useMemo(() => ({
     onEventReceived: handleEventReceived,
   }), [handleEventReceived]);
 
   useGameSubscriptions(ws, realTimeState, subscriptionCallbacks);
 
-  // Connect WebSocket when game is active
   useEffect(() => {
     if (gameState === 'active') {
       ws.connect();
     }
-
-    return () => {
-      ws.disconnect();
-    };
+    return () => { ws.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);
 
-  // Play game end fanfare when game completes
+  // When WebSocket connects/reconnects, refetch basestations to catch missed events
+  const wsConnected = ws.connected;
+
   useEffect(() => {
-    if (gameState === 'completed') {
-      playGameEnd();
-    }
+    if (gameState === 'completed') playGameEnd();
   }, [gameState, playGameEnd]);
 
-  // Fetch basestations via REST API
   const fetchBasestations = useCallback(() => {
     if (!sessionCode || !token) return;
-
     apiGet<BasestationsResponse>(`/api/sessions/${sessionCode}/basestations`, token)
       .then((data) => {
-        // Detect resolved events: compare previous event IDs with current
         const newResolvedBsIds: number[] = [];
         const currentEventMap = new Map<number, Set<number>>();
-
         for (const bs of data.basestations) {
           const currentEventIds = new Set(bs.activeEvents.map((e) => e.id));
           currentEventMap.set(bs.id, currentEventIds);
-
           const previousIds = previousEventIdsRef.current.get(bs.id);
           if (previousIds && previousIds.size > 0) {
-            // Check if any previously active events are now gone (resolved)
             for (const prevId of previousIds) {
-              if (!currentEventIds.has(prevId)) {
-                newResolvedBsIds.push(bs.id);
-                break; // One resolved event is enough to trigger the animation
-              }
+              if (!currentEventIds.has(prevId)) { newResolvedBsIds.push(bs.id); break; }
             }
           }
         }
-
-        // Update the previous events ref for next comparison
         previousEventIdsRef.current = currentEventMap;
-
-        // Trigger resolution animations
         if (newResolvedBsIds.length > 0) {
           setResolvedBasestationIds(new Set(newResolvedBsIds));
-          // Clear after animation duration (2 seconds)
-          setTimeout(() => {
-            setResolvedBasestationIds(new Set());
-          }, 2000);
+          setTimeout(() => setResolvedBasestationIds(new Set()), 2000);
         }
-
         setBasestations(data.basestations);
         setBasestationsLoading(false);
       })
@@ -199,80 +186,92 @@ function GamePageInner() {
       });
   }, [sessionCode, token]);
 
-  useEffect(() => {
-    fetchBasestations();
-  }, [fetchBasestations]);
+  useEffect(() => { fetchBasestations(); }, [fetchBasestations]);
 
-  // Fetch rApp catalogue for mobile CatalogueStrip
+  // On mount (including page refresh) fetch the session to get startedAt so
+  // the timer counts down from the real game-start time, not from zero.
+  useEffect(() => {
+    if (!sessionCode || !token || gameState !== 'active') return;
+    apiGet<{ startedAt: string | null; totalTicks?: number }>(
+      `/api/sessions/${sessionCode}`,
+      token,
+    )
+      .then((data) => {
+        if (data.startedAt) {
+          setGameStartedAt(data.startedAt);
+        }
+        if (data.totalTicks) {
+          setGameTotalSeconds(data.totalTicks * 5); // 5 s per tick
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch session:', err);
+      });
+  }, [sessionCode, token, gameState]);
+
+  // Refetch when WebSocket connects/reconnects to catch missed events
+  useEffect(() => {
+    if (wsConnected) {
+      fetchBasestations();
+    }
+  }, [wsConnected, fetchBasestations]);
+
+  // Periodic basestations poll — safety net for missed WebSocket events
+  useEffect(() => {
+    if (gameState !== 'active') return;
+    const interval = setInterval(() => {
+      fetchBasestations();
+    }, 10000); // every 10 seconds
+    return () => clearInterval(interval);
+  }, [gameState, fetchBasestations]);
+
   const fetchCatalogue = useCallback(() => {
     if (!token) return;
     apiGet<CatalogueResponse>('/api/rapps/catalogue', token)
-      .then((data) => {
-        setRapps(data.rapps);
-      })
-      .catch((err) => {
-        console.error('Failed to load catalogue:', err);
-      });
+      .then((data) => setRapps(data.rapps))
+      .catch((err) => console.error('Failed to load catalogue:', err));
   }, [token]);
 
-  useEffect(() => {
-    fetchCatalogue();
-  }, [fetchCatalogue]);
+  useEffect(() => { fetchCatalogue(); }, [fetchCatalogue]);
 
   const handleSelectBasestation = useCallback((id: number | null) => {
     setSelectedBasestationId(id);
   }, []);
 
-  // Track screen position of selected basestation for popover anchoring
   const handleScreenPositionUpdate = useCallback((position: { x: number; y: number } | null) => {
     setPopoverAnchor(position);
   }, []);
 
-  // Get the full basestation data for the popover
   const selectedBasestation = useMemo(() => {
     if (!selectedBasestationId) return null;
     return basestations.find((bs) => bs.id === selectedBasestationId) ?? null;
   }, [selectedBasestationId, basestations]);
 
-  // --- Deploy flow ---
   const handleConfirmDeploy = useCallback(async (templateId: number, basestationId: number) => {
     if (!sessionCode || !token) return;
-    await apiPost(
-      `/api/sessions/${sessionCode}/rapps/deploy`,
-      { templateId, basestationId },
-      token,
-    );
+    await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
     addToast('rApp deployed successfully!', 'success');
     playDeploy();
-    // Refetch basestations to update deployed rApps list
     fetchBasestations();
   }, [sessionCode, token, addToast, fetchBasestations, playDeploy]);
 
-  // --- Drag-and-drop deploy handler ---
   const handleDrop = useCallback(async (basestationId: number) => {
     if (!dragState || !sessionCode || !token || isDeploying) return;
     const { templateId } = dragState;
     setIsDeploying(true);
     try {
-      await apiPost(
-        `/api/sessions/${sessionCode}/rapps/deploy`,
-        { templateId, basestationId },
-        token,
-      );
+      await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
       addToast('rApp deployed successfully!', 'success');
       playDeploy();
       fetchBasestations();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to deploy rApp';
-      addToast(message, 'error');
+      addToast(err instanceof Error ? err.message : 'Failed to deploy rApp', 'error');
     } finally {
       endDrag();
       setIsDeploying(false);
     }
   }, [dragState, sessionCode, token, isDeploying, addToast, playDeploy, fetchBasestations, endDrag]);
 
-  // --- Tune flow ---
-  // Note: handleTune is wired to BasestationPopover
   const handleTune = useCallback((rappId: number, rappName: string, threshold?: number, aggressiveness?: string) => {
     setTuneTarget({ id: rappId, name: rappName, threshold, aggressiveness });
     setTuneModalOpen(true);
@@ -280,71 +279,47 @@ function GamePageInner() {
 
   const handleConfirmTune = useCallback(async (rappId: number, threshold: number, aggressiveness: string) => {
     if (!sessionCode || !token) return;
-    await apiPut(
-      `/api/sessions/${sessionCode}/rapps/${rappId}/tune`,
-      { threshold, aggressiveness },
-      token,
-    );
+    await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/tune`, { threshold, aggressiveness }, token);
     addToast('rApp tuned successfully!', 'success');
     fetchBasestations();
   }, [sessionCode, token, addToast, fetchBasestations]);
 
-  // --- Disable flow ---
   const handleDisable = useCallback(async (rappId: number) => {
     if (!sessionCode || !token) return;
     try {
-      await apiPut(
-        `/api/sessions/${sessionCode}/rapps/${rappId}/disable`,
-        undefined,
-        token,
-      );
+      await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, undefined, token);
       addToast('rApp disabled', 'info');
       fetchBasestations();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to disable rApp';
-      addToast(message, 'error');
+      addToast(err instanceof Error ? err.message : 'Failed to disable rApp', 'error');
     }
   }, [sessionCode, token, addToast, fetchBasestations]);
 
-  // --- Rollback flow ---
   const handleRollback = useCallback(async (rappId: number) => {
     if (!sessionCode || !token) return;
     try {
-      await apiPut(
-        `/api/sessions/${sessionCode}/rapps/${rappId}/rollback`,
-        undefined,
-        token,
-      );
+      await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, undefined, token);
       addToast('rApp rolled back to previous version', 'success');
       fetchBasestations();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to rollback rApp';
-      addToast(message, 'error');
+      addToast(err instanceof Error ? err.message : 'Failed to rollback rApp', 'error');
     }
   }, [sessionCode, token, addToast, fetchBasestations]);
 
-  // Merge REST data with real-time metrics
   const mergedBasestations = useMemo(() => basestations.map((bs) => {
     const rtState = realTimeState.basestations.find((rt) => rt.id === bs.id);
     const activeRapps = realTimeState.rappDeployments.filter(
       (r) => r.basestationId === bs.id && r.newStatus === 'ACTIVE',
     );
-    const hasEvent = realTimeState.events.some((e) => e.basestationId === bs.id);
-
-    // Count active rApps: use REST data as source of truth, add only RT deployments
-    // that aren't already reflected in the REST data (by checking deploymentId)
     const restActiveCount = bs.deployedRapps.filter((r) => r.status === 'ACTIVE').length;
     const restDeploymentIds = new Set(bs.deployedRapps.map((r) => r.id));
     const newRtDeployments = activeRapps.filter((r) => !restDeploymentIds.has(r.deploymentId));
     const totalActiveRapps = restActiveCount + newRtDeployments.length;
 
-    // Compute highest severity from both REST and real-time events
     const severityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
     const allSeverities = [
       ...bs.activeEvents.map((e) => e.severity),
-      ...realTimeState.events
-        .filter((e) => e.basestationId === bs.id)
-        .map((e) => e.severity),
+      ...realTimeState.events.filter((e) => e.basestationId === bs.id).map((e) => e.severity),
     ];
     const highestSeverity = allSeverities.length > 0
       ? allSeverities.reduce((highest, current) =>
@@ -352,7 +327,6 @@ function GamePageInner() {
         ) as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
       : undefined;
 
-    // Compute highest escalation level (0-3) from REST events on this basestation
     const highestEscalation = bs.activeEvents.length > 0
       ? Math.max(...bs.activeEvents.map((e) => e.escalationLevel))
       : 0;
@@ -361,16 +335,14 @@ function GamePageInner() {
       ...bs,
       metrics: rtState ? rtState.metrics : bs.metrics,
       activeRappsCount: totalActiveRapps,
-      hasEvent: hasEvent || bs.activeEvents.length > 0,
+      hasEvent: bs.activeEvents.length > 0 || realTimeState.events.some((e) => e.basestationId === bs.id),
       highestSeverity,
       highestEscalation,
       showResolution: resolvedBasestationIds.has(bs.id),
     };
   }), [basestations, realTimeState.basestations, realTimeState.rappDeployments, realTimeState.events, resolvedBasestationIds]);
 
-  // Combine REST events (from basestations) with real-time WebSocket events for the EventPanel
   const combinedActiveEvents: ActiveEvent[] = useMemo(() => {
-    // Collect all REST events from basestations, attaching basestation name
     const restEvents: ActiveEvent[] = basestations.flatMap((bs) =>
       bs.activeEvents.map((e) => ({
         id: e.id,
@@ -382,8 +354,6 @@ function GamePageInner() {
         basestationName: bs.name,
       })),
     );
-
-    // Collect real-time WebSocket events
     const rtEvents: ActiveEvent[] = realTimeState.events.map((e) => ({
       id: e.eventId,
       eventType: e.eventType,
@@ -393,135 +363,190 @@ function GamePageInner() {
       createdAt: '',
       basestationName: e.basestationName,
     }));
-
-    // Merge: prefer REST data (has escalation + createdAt), add any RT-only events
     const restIds = new Set(restEvents.map((e) => e.id));
     return [...restEvents, ...rtEvents.filter((e) => !restIds.has(e.id))];
   }, [basestations, realTimeState.events]);
 
+  const currentPlayerName = useMemo(
+    () => players.find((p) => p.id === playerId)?.displayName ?? 'Player',
+    [players, playerId],
+  );
+
   return (
-      <div className="flex flex-col h-full relative">
-        {/* Generic Toasts (deploy success, tune success, etc.) */}
-        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    <div className="flex flex-col h-full relative">
+      {/* Overlays (unchanged) */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <EventAlertContainer alerts={eventAlerts} onDismiss={dismissEventAlert} />
+      <DragPreview />
 
-        {/* Event Alerts (dedicated event notifications with severity colours) */}
-        <EventAlertContainer alerts={eventAlerts} onDismiss={dismissEventAlert} />
+      {/* ── Header bar ── */}
+      <header className="hidden md:flex h-12 items-center px-4 gap-4 bg-surface border-b border-surface-lighter shrink-0 z-20">
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <Radio size={18} className="text-primary" />
+          <span className="text-sm font-bold tracking-wide text-text">
+            rApp <span className="text-primary">TYCOON</span>
+          </span>
+        </div>
 
-        {/* Drag Preview — follows cursor during drag */}
-        <DragPreview />
+        {/* Session code pill */}
+        {sessionCode && (
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded border border-surface-lighter text-text-muted bg-surface-light">
+            {sessionCode}
+          </span>
+        )}
 
-        {/* Main content: Map + Right Panel in a row */}
-        <div className="flex flex-1 min-h-0">
-          {/* Map area — takes remaining space */}
-          <div className="flex-1 relative min-w-0 min-h-0">
-            {/* Settings toolbar (sound + theme toggles) */}
-            <div className="absolute top-3 right-3 z-10">
-              <SettingsToolbar />
-            </div>
-            <ScoreSummary
-              entry={realTimeState.leaderboard.find((e) => e.playerId === playerId)}
-            />
+        <div className="flex-1" />
 
-            {/* Floating Leaderboard — top-left, semi-transparent */}
-            <div className="absolute top-14 left-3 z-10 w-56 bg-surface/80 backdrop-blur-sm border border-surface-lighter/50 rounded-lg shadow-lg overflow-hidden hidden md:block">
-              <div className="p-3 max-h-64 overflow-y-auto">
-                {realTimeState.leaderboard.length === 0
-                  ? <LeaderboardSkeleton />
-                  : <MemoizedLeaderboard entries={realTimeState.leaderboard} currentPlayerId={playerId} />
-                }
-              </div>
-            </div>
+        {/* Game timer */}
+        {gameState === 'active' && gameStartedAt && (
+          <GameTimer
+            startedAt={gameStartedAt}
+            totalDurationSeconds={gameTotalSeconds}
+          />
+        )}
 
-            <Suspense fallback={<BasestationsSkeleton />}>
-              <IsometricMap
-                basestations={mergedBasestations}
-                selectedBasestationId={selectedBasestationId}
-                onSelectBasestation={handleSelectBasestation}
-                onDrop={isDeploying ? undefined : handleDrop}
-                onScreenPositionUpdate={handleScreenPositionUpdate}
-              />
-            </Suspense>
-            {basestationsLoading && <BasestationsSkeleton />}
-
-            {/* Basestation Popover — floats over the map near the selected basestation */}
-            {selectedBasestation && popoverAnchor && (
-              <BasestationPopover
-                basestation={selectedBasestation}
-                anchorPosition={popoverAnchor}
-                onClose={() => setSelectedBasestationId(null)}
-                onTune={handleTune}
-                onDisable={handleDisable}
-                onRollback={handleRollback}
-              />
-            )}
+        {/* Settings + player */}
+        <SettingsToolbar />
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-light border border-surface-lighter">
+          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+            <User size={11} className="text-primary" />
           </div>
+          <span className="text-xs font-medium text-text">{currentPlayerName}</span>
+        </div>
+      </header>
 
-          {/* Right panel — RappCatalogue only (always visible) */}
-          <div className="hidden md:flex w-72 bg-surface border-l border-surface-lighter flex-col">
-            {/* rApp Catalogue */}
-            <div className="flex-1 overflow-y-auto p-4">
+      {/* ── 3-column main area ── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* Center — Map (full width, catalog and overlays float on top) */}
+        <div className="flex-1 relative min-w-0 min-h-0">
+          {/* Floating rApp Catalog — left side, full map height */}
+          <div className="absolute top-3 bottom-3 left-3 z-10 w-60 hidden md:flex flex-col bg-surface/90 backdrop-blur-sm border border-surface-lighter/60 rounded-lg shadow-lg overflow-hidden">
+            <div className="px-3 py-2 border-b border-surface-lighter/60 shrink-0">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                rAPP Catalog
+              </h2>
+            </div>
+            <div className="overflow-y-auto p-3">
               <RappCatalogue
                 basestations={basestations.map((bs) => ({ id: bs.id, name: bs.name }))}
                 onConfirmDeploy={handleConfirmDeploy}
               />
             </div>
           </div>
-        </div>
 
-        {/* Bottom bar — Event Panel (h-36, horizontally scrollable) — hidden on mobile */}
-        <div className="hidden md:block h-36 border-t border-surface-lighter bg-surface overflow-x-auto overflow-y-auto p-3">
-          <MemoizedEventPanel events={combinedActiveEvents} />
-        </div>
+          {/* Legend */}
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-3 bg-surface/85 backdrop-blur-sm px-3 py-1.5 rounded border border-surface-lighter shadow">
+            <LegendDot color="bg-emerald-400" label="Active" />
+            <LegendDot color="bg-amber-400" label="Warning" />
+            <LegendDot color="bg-red-500" label="Critical" />
+          </div>
 
-        {/* Mobile Bottom Sheet — visible only on mobile (< 768px) */}
-        <BottomSheet
-          strip={
-            <CatalogueStrip
-              rapps={rapps}
-              onDeploy={() => {}}
-              dragState={dragState}
-              basestations={basestations.map((bs) => ({ id: bs.id, name: bs.name }))}
-              onConfirmDeploy={handleConfirmDeploy}
+          <Suspense fallback={<BasestationsSkeleton />}>
+            <IsometricMap
+              basestations={mergedBasestations}
+              selectedBasestationId={selectedBasestationId}
+              onSelectBasestation={handleSelectBasestation}
+              onDrop={isDeploying ? undefined : handleDrop}
+              onScreenPositionUpdate={handleScreenPositionUpdate}
             />
-          }
-        >
-          <ExpandableSection
-            title="Events"
-            badge={combinedActiveEvents.length > 0 ? combinedActiveEvents.length : undefined}
-          >
-            <MemoizedEventPanel events={combinedActiveEvents} />
-          </ExpandableSection>
-          <ExpandableSection title="Leaderboard">
+          </Suspense>
+          {basestationsLoading && <BasestationsSkeleton />}
+
+          {selectedBasestation && popoverAnchor && (
+            <BasestationPopover
+              basestation={selectedBasestation}
+              anchorPosition={popoverAnchor}
+              onClose={() => setSelectedBasestationId(null)}
+              onTune={handleTune}
+              onDisable={handleDisable}
+              onRollback={handleRollback}
+            />
+          )}
+        </div>
+
+        {/* Right panel — Session Scoreboard */}
+        <div className="hidden md:flex w-56 bg-surface border-l border-surface-lighter flex-col shrink-0">
+          <div className="px-3 py-2 border-b border-surface-lighter">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+              Session Scoreboard
+            </h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
             {realTimeState.leaderboard.length === 0
               ? <LeaderboardSkeleton />
               : <MemoizedLeaderboard entries={realTimeState.leaderboard} currentPlayerId={playerId} />
             }
-          </ExpandableSection>
-        </BottomSheet>
-
-        {/* Tune Modal */}
-        {tuneTarget && (
-          <TuneModal
-            isOpen={tuneModalOpen}
-            onClose={() => {
-              setTuneModalOpen(false);
-              setTuneTarget(null);
-            }}
-            rappName={tuneTarget.name}
-            rappId={tuneTarget.id}
-            currentThreshold={tuneTarget.threshold}
-            currentAggressiveness={
-              (tuneTarget.aggressiveness as 'LOW' | 'MODERATE' | 'HIGH') || undefined
-            }
-            onConfirm={handleConfirmTune}
-          />
-        )}
-
-        {ws.error && (
-          <div className="absolute bottom-4 left-4 bg-danger/20 text-danger px-3 py-2 rounded text-sm">
-            {ws.error}
           </div>
-        )}
+
+        </div>
       </div>
+
+      {/* ── Bottom bar — Live Incident Feed (full width) ── */}
+      <div className="hidden md:flex h-52 border-t border-surface-lighter shrink-0 bg-surface">
+        <div className="flex flex-col w-full overflow-hidden">
+          <div className="px-4 py-2 border-b border-surface-lighter flex items-center gap-2 shrink-0">
+            <AlertTriangle size={11} className={combinedActiveEvents.length > 0 ? 'text-warning' : 'text-text-muted'} />
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+              Live Incident Feed
+            </h3>
+            {combinedActiveEvents.length > 0 && (
+              <span className="text-[10px] font-medium text-warning">
+                ({combinedActiveEvents.length} active)
+              </span>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <MemoizedEventPanel events={combinedActiveEvents} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Mobile Bottom Sheet (unchanged, hidden on md+) ── */}
+      <BottomSheet
+        strip={
+          <CatalogueStrip
+            rapps={rapps}
+            onDeploy={() => {}}
+            dragState={dragState}
+            basestations={basestations.map((bs) => ({ id: bs.id, name: bs.name }))}
+            onConfirmDeploy={handleConfirmDeploy}
+          />
+        }
+      >
+        <ExpandableSection
+          title="Events"
+          badge={combinedActiveEvents.length > 0 ? combinedActiveEvents.length : undefined}
+        >
+          <MemoizedEventPanel events={combinedActiveEvents} />
+        </ExpandableSection>
+        <ExpandableSection title="Leaderboard">
+          {realTimeState.leaderboard.length === 0
+            ? <LeaderboardSkeleton />
+            : <MemoizedLeaderboard entries={realTimeState.leaderboard} currentPlayerId={playerId} />
+          }
+        </ExpandableSection>
+      </BottomSheet>
+
+      {/* Tune Modal */}
+      {tuneTarget && (
+        <TuneModal
+          isOpen={tuneModalOpen}
+          onClose={() => { setTuneModalOpen(false); setTuneTarget(null); }}
+          rappName={tuneTarget.name}
+          rappId={tuneTarget.id}
+          currentThreshold={tuneTarget.threshold}
+          currentAggressiveness={(tuneTarget.aggressiveness as 'LOW' | 'MODERATE' | 'HIGH') || undefined}
+          onConfirm={handleConfirmTune}
+        />
+      )}
+
+      {ws.error && (
+        <div className="absolute bottom-4 left-4 bg-danger/20 text-danger px-3 py-2 rounded text-sm z-50">
+          {ws.error}
+        </div>
+      )}
+    </div>
   );
 }

@@ -48,15 +48,20 @@ class ScoreServiceTest {
 
     private GameProperties.Score score;
     private GameProperties.Score.Weight weight;
+    private GameProperties.Tick tick;
 
     @BeforeEach
     void setUp() {
         score = new GameProperties.Score();
         weight = new GameProperties.Score.Weight();
-        weight.setMoney(0.30);
-        weight.setSatisfaction(0.35);
-        weight.setStability(0.35);
+        weight.setMoney(0.10);
+        weight.setSatisfaction(0.45);
+        weight.setStability(0.45);
         score.setWeight(weight);
+
+        tick = new GameProperties.Tick();
+        tick.setInterval(5000);
+        tick.setTotal(60);
     }
 
     @Test
@@ -115,10 +120,10 @@ class ScoreServiceTest {
                 .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
         assertThat(result.getScoreStability()).isEqualByComparingTo(expectedStability);
 
-        // compositeScore = (800 * 0.30) + (80 * 0.35) + (88.34 * 0.35)
-        BigDecimal expectedComposite = new BigDecimal("800.00").multiply(BigDecimal.valueOf(0.30))
-                .add(new BigDecimal("80.00").multiply(BigDecimal.valueOf(0.35)))
-                .add(expectedStability.multiply(BigDecimal.valueOf(0.35)))
+        // compositeScore = (800 * 0.10) + (80 * 0.45) + (88.34 * 0.45)
+        BigDecimal expectedComposite = new BigDecimal("800.00").multiply(BigDecimal.valueOf(0.10))
+                .add(new BigDecimal("80.00").multiply(BigDecimal.valueOf(0.45)))
+                .add(expectedStability.multiply(BigDecimal.valueOf(0.45)))
                 .setScale(2, RoundingMode.HALF_UP);
         assertThat(result.getCompositeScore()).isEqualByComparingTo(expectedComposite);
     }
@@ -146,8 +151,8 @@ class ScoreServiceTest {
 
         assertThat(result.getScoreSatisfaction()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(result.getScoreStability()).isEqualByComparingTo(BigDecimal.ZERO);
-        // compositeScore = (1000 * 0.30) + (0 * 0.35) + (0 * 0.35) = 300.00
-        assertThat(result.getCompositeScore()).isEqualByComparingTo(new BigDecimal("300.00"));
+        // compositeScore = (1000 * 0.10) + (0 * 0.45) + (0 * 0.45) = 100.00
+        assertThat(result.getCompositeScore()).isEqualByComparingTo(new BigDecimal("100.00"));
     }
 
     @Test
@@ -202,8 +207,8 @@ class ScoreServiceTest {
         // avg = (100 + 50 + 75) / 3 = 75.00
         assertThat(result.getScoreStability()).isEqualByComparingTo(new BigDecimal("75.00"));
 
-        // compositeScore = (500 * 0.30) + (75 * 0.35) + (75 * 0.35) = 150 + 26.25 + 26.25 = 202.50
-        assertThat(result.getCompositeScore()).isEqualByComparingTo(new BigDecimal("202.50"));
+        // compositeScore = (500 * 0.10) + (75 * 0.45) + (75 * 0.45) = 50 + 33.75 + 33.75 = 117.50
+        assertThat(result.getCompositeScore()).isEqualByComparingTo(new BigDecimal("117.50"));
     }
 
     @Test
@@ -262,6 +267,7 @@ class ScoreServiceTest {
 
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
         when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+        when(gameProperties.getTick()).thenReturn(tick);
 
         LeaderboardResponse response = scoreService.getLeaderboard("ABCD1234");
 
@@ -298,6 +304,7 @@ class ScoreServiceTest {
 
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
         when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+        when(gameProperties.getTick()).thenReturn(tick);
 
         LeaderboardResponse response = scoreService.getLeaderboard("ABCD1234");
 
@@ -329,6 +336,7 @@ class ScoreServiceTest {
 
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
         when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+        when(gameProperties.getTick()).thenReturn(tick);
 
         LeaderboardEntryDto winner = scoreService.determineWinner("ABCD1234");
 
