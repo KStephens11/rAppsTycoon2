@@ -331,6 +331,13 @@ function GamePageInner() {
     );
     const hasEvent = realTimeState.events.some((e) => e.basestationId === bs.id);
 
+    // Count active rApps: use REST data as source of truth, add only RT deployments
+    // that aren't already reflected in the REST data (by checking deploymentId)
+    const restActiveCount = bs.deployedRapps.filter((r) => r.status === 'ACTIVE').length;
+    const restDeploymentIds = new Set(bs.deployedRapps.map((r) => r.id));
+    const newRtDeployments = activeRapps.filter((r) => !restDeploymentIds.has(r.deploymentId));
+    const totalActiveRapps = restActiveCount + newRtDeployments.length;
+
     // Compute highest severity from both REST and real-time events
     const severityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
     const allSeverities = [
@@ -353,7 +360,7 @@ function GamePageInner() {
     return {
       ...bs,
       metrics: rtState ? rtState.metrics : bs.metrics,
-      activeRappsCount: activeRapps.length + bs.deployedRapps.filter((r) => r.status === 'ACTIVE').length,
+      activeRappsCount: totalActiveRapps,
       hasEvent: hasEvent || bs.activeEvents.length > 0,
       highestSeverity,
       highestEscalation,

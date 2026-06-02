@@ -146,15 +146,15 @@ export function BasestationModel({
       onPointerOut={() => { handlePointerLeave(); }}
       onPointerUp={(e) => { handlePointerUp(e); }}
     >
-      {/* Base platform */}
-      <mesh position={[0, 0.1, 0]} castShadow>
-        <cylinderGeometry args={[0.6, 0.7, 0.2, 16]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.6} roughness={0.4} />
+      {/* Base — circular concrete pad, fits inside the health ring */}
+      <mesh position={[0, 0.05, 0]} castShadow>
+        <cylinderGeometry args={[0.4, 0.4, 0.1, 24]} />
+        <meshStandardMaterial color="#6b7280" roughness={0.8} />
       </mesh>
 
-      {/* Glowing health ring */}
-      <mesh position={[0, 0.22, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.65, 0.06, 8, 32]} />
+      {/* Health indicator ring on the ground */}
+      <mesh position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.45, 0.04, 8, 24]} />
         <meshStandardMaterial
           color={escalatedHealthColor}
           emissive={escalatedHealthColor}
@@ -164,10 +164,10 @@ export function BasestationModel({
         />
       </mesh>
 
-      {/* Drop target indicator — subtle cyan glow when drag is active */}
+      {/* Drop target indicator — cyan glow when drag is active */}
       {isDragActive && (
-        <mesh position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.85, 0.04, 8, 32]} />
+        <mesh position={[0, 0.11, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.65, 0.03, 8, 24]} />
           <meshStandardMaterial
             color="#06b6d4"
             emissive="#06b6d4"
@@ -178,10 +178,10 @@ export function BasestationModel({
         </mesh>
       )}
 
-      {/* Hovered drop target — additional bright outer ring */}
+      {/* Hovered drop target — brighter outer ring */}
       {isHoveredTarget && (
-        <mesh position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.0, 0.05, 8, 32]} />
+        <mesh position={[0, 0.11, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.8, 0.04, 8, 24]} />
           <meshStandardMaterial
             color="#22d3ee"
             emissive="#22d3ee"
@@ -192,31 +192,106 @@ export function BasestationModel({
         </mesh>
       )}
 
-      {/* Main tower pole */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <cylinderGeometry args={[0.08, 0.12, 2.0, 8]} />
-        <meshStandardMaterial color="#4b5563" metalness={0.8} roughness={0.3} />
+      {/* Tower — central mast */}
+      <mesh position={[0, 0.85, 0]} castShadow>
+        <cylinderGeometry args={[0.025, 0.035, 1.6, 6]} />
+        <meshStandardMaterial color="#9ca3af" metalness={0.6} roughness={0.4} />
       </mesh>
 
-      {/* Cross arms */}
-      <mesh position={[0, 1.8, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.8, 6]} />
-        <meshStandardMaterial color="#6b7280" metalness={0.7} roughness={0.3} />
-      </mesh>
+      {/* Cone frame — three legs from wide base to narrow top */}
+      {[0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].map((angle, i) => {
+        const baseRadius = 0.3;
+        const topRadius = 0.06;
+        const baseY = 0.1;
+        const topY = 1.65;
+        const height = topY - baseY;
+        // Bottom and top positions of each leg
+        const bx = Math.cos(angle) * baseRadius;
+        const bz = Math.sin(angle) * baseRadius;
+        const tx = Math.cos(angle) * topRadius;
+        const tz = Math.sin(angle) * topRadius;
+        // Midpoint
+        const mx = (bx + tx) / 2;
+        const my = (baseY + topY) / 2;
+        const mz = (bz + tz) / 2;
+        // Direction vector
+        const dx = tx - bx;
+        const dy = height;
+        const dz = tz - bz;
+        const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        // Rotation: align cylinder (default Y-axis) to the direction vector
+        const axis = new THREE.Vector3(dx, dy, dz).normalize();
+        const quat = new THREE.Quaternion().setFromUnitVectors(
+          new THREE.Vector3(0, 1, 0),
+          axis,
+        );
+        const euler = new THREE.Euler().setFromQuaternion(quat);
 
-      {/* Antenna dish (rotating) */}
-      <mesh ref={antennaRef} position={[0, 2.3, 0]} castShadow>
-        <coneGeometry args={[0.2, 0.3, 8]} />
-        <meshStandardMaterial color="#9ca3af" metalness={0.9} roughness={0.2} />
-      </mesh>
+        return (
+          <mesh
+            key={`leg-${i}`}
+            position={[mx, my, mz]}
+            rotation={euler}
+            castShadow
+          >
+            <cylinderGeometry args={[0.012, 0.015, len, 4]} />
+            <meshStandardMaterial color="#6b7280" metalness={0.5} roughness={0.5} />
+          </mesh>
+        );
+      })}
 
-      {/* Antenna tip light */}
-      <mesh position={[0, 2.5, 0]}>
-        <sphereGeometry args={[0.06, 8, 8]} />
+      {/* Horizontal cross-braces connecting legs at two heights */}
+      {[0.5, 1.1].map((y, yi) => {
+        const t = (y - 0.1) / 1.55;
+        const radius = 0.3 - t * 0.24;
+        return [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].map((angle, i) => {
+          const nextAngle = angle + (2 * Math.PI) / 3;
+          const x1 = Math.cos(angle) * radius;
+          const z1 = Math.sin(angle) * radius;
+          const x2 = Math.cos(nextAngle) * radius;
+          const z2 = Math.sin(nextAngle) * radius;
+          const mx = (x1 + x2) / 2;
+          const mz = (z1 + z2) / 2;
+          const braceLen = Math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2);
+          const dir = new THREE.Vector3(x2 - x1, 0, z2 - z1).normalize();
+          const quat = new THREE.Quaternion().setFromUnitVectors(
+            new THREE.Vector3(0, 1, 0),
+            dir,
+          );
+          const euler = new THREE.Euler().setFromQuaternion(quat);
+          return (
+            <mesh
+              key={`brace-${yi}-${i}`}
+              position={[mx, y, mz]}
+              rotation={euler}
+            >
+              <cylinderGeometry args={[0.006, 0.006, braceLen, 4]} />
+              <meshStandardMaterial color="#6b7280" metalness={0.5} roughness={0.5} />
+            </mesh>
+          );
+        });
+      })}
+
+      {/* Three antennas at the top — simple flat rectangles */}
+      {[0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].map((angle, i) => (
+        <mesh
+          key={`antenna-${i}`}
+          position={[Math.cos(angle) * 0.08, 1.55, Math.sin(angle) * 0.08]}
+          rotation={[0, -angle, 0]}
+          castShadow
+        >
+          <boxGeometry args={[0.05, 0.2, 0.015]} />
+          <meshStandardMaterial color="#d1d5db" metalness={0.5} roughness={0.3} />
+        </mesh>
+      ))}
+
+      {/* Red beacon light at the tip */}
+      <mesh ref={antennaRef} position={[0, 1.7, 0]}>
+        <sphereGeometry args={[0.025, 8, 8]} />
         <meshStandardMaterial
-          color="#06b6d4"
-          emissive="#06b6d4"
-          emissiveIntensity={1.5}
+          color="#ef4444"
+          emissive="#ef4444"
+          emissiveIntensity={2.0}
         />
       </mesh>
 
@@ -230,7 +305,7 @@ export function BasestationModel({
         </>
       )}
 
-      {/* Active rApp indicators */}
+      {/* Active rApp indicators — orbit around the antenna area */}
       {activeRapps > 0 && (
         <RappOrbiters count={activeRapps} />
       )}
@@ -242,11 +317,12 @@ export function BasestationModel({
 
       {/* Hover tooltip */}
       {hovered && (
-        <Html position={[0, 3.2, 0]} center>
+        <Html position={[0, 2.0, 0]} center>
           <div className="bg-slate-900/95 border border-slate-700 rounded-lg px-3 py-2 text-center whitespace-nowrap shadow-xl">
             <p className="text-white text-sm font-semibold">{name}</p>
             <p className="text-slate-400 text-xs">
               Health: <span style={{ color: healthColor }}>{health.toFixed(0)}%</span>
+              {activeRapps > 0 && <> · {activeRapps} rApp{activeRapps > 1 ? 's' : ''}</>}
             </p>
           </div>
         </Html>
@@ -266,17 +342,17 @@ function RappOrbiters({ count }: { count: number }) {
   });
 
   return (
-    <group ref={groupRef} position={[0, 1.5, 0]}>
+    <group ref={groupRef} position={[0, 1.4, 0]}>
       {Array.from({ length: Math.min(count, 6) }, (_, i) => {
         const angle = (i / Math.min(count, 6)) * Math.PI * 2;
         const color = COLORS[i % COLORS.length];
         return (
           <mesh
             key={i}
-            position={[Math.cos(angle) * 0.5, 0, Math.sin(angle) * 0.5]}
+            position={[Math.cos(angle) * 0.3, 0, Math.sin(angle) * 0.3]}
           >
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} />
+            <sphereGeometry args={[0.035, 8, 8]} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.5} />
           </mesh>
         );
       })}
@@ -307,12 +383,12 @@ function EventMarker({ severity, escalation = 0 }: { severity?: EventSeverity; e
       meshRef.current.scale.set(scale, scale, scale);
 
       // Gentle bob up and down
-      meshRef.current.position.y = 3.0 + 0.1 * Math.sin(t * 0.5);
+      meshRef.current.position.y = 1.9 + 0.08 * Math.sin(t * 0.5);
     }
   });
 
   return (
-    <mesh ref={meshRef} position={[0, 3.0, 0]} rotation={[0, 0, 0]}>
+    <mesh ref={meshRef} position={[0, 1.9, 0]} rotation={[0, 0, 0]}>
       {/* Cone pointing up — acts as a warning triangle shape */}
       <coneGeometry args={[0.2, 0.35, 3]} />
       <meshStandardMaterial
