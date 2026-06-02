@@ -48,6 +48,7 @@ class ScoreServiceTest {
 
     private GameProperties.Score score;
     private GameProperties.Score.Weight weight;
+    private GameProperties.Tick tick;
 
     @BeforeEach
     void setUp() {
@@ -57,6 +58,10 @@ class ScoreServiceTest {
         weight.setSatisfaction(0.45);
         weight.setStability(0.45);
         score.setWeight(weight);
+
+        tick = new GameProperties.Tick();
+        tick.setInterval(5000);
+        tick.setTotal(60);
     }
 
     @Test
@@ -262,6 +267,7 @@ class ScoreServiceTest {
 
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
         when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+        when(gameProperties.getTick()).thenReturn(tick);
 
         LeaderboardResponse response = scoreService.getLeaderboard("ABCD1234");
 
@@ -298,6 +304,7 @@ class ScoreServiceTest {
 
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
         when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+        when(gameProperties.getTick()).thenReturn(tick);
 
         LeaderboardResponse response = scoreService.getLeaderboard("ABCD1234");
 
@@ -329,6 +336,7 @@ class ScoreServiceTest {
 
         when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
         when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player1, player2));
+        when(gameProperties.getTick()).thenReturn(tick);
 
         LeaderboardEntryDto winner = scoreService.determineWinner("ABCD1234");
 
