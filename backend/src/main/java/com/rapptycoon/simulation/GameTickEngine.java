@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,6 +47,10 @@ public class GameTickEngine {
     private final RappService rappService;
     private final GameProperties gameProperties;
     private final WebSocketBroadcaster broadcaster;
+
+    @Autowired
+    @Lazy
+    private GameTickEngine self;
 
     public GameTickEngine(GameSessionRepository gameSessionRepository,
                           RappDeploymentRepository rappDeploymentRepository,
@@ -81,7 +87,7 @@ public class GameTickEngine {
         List<GameSession> activeSessions = gameSessionRepository.findByState(GameSessionState.ACTIVE);
         for (GameSession session : activeSessions) {
             try {
-                processTick(session);
+                self.processTick(session);
             } catch (Exception e) {
                 log.error("Error processing tick for session {}: {}", session.getSessionCode(), e.getMessage(), e);
             }

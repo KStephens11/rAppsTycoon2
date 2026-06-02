@@ -26,7 +26,8 @@ import java.util.Set;
 public class RappService {
 
     private static final String DEFAULT_CONFIGURATION = "{\"threshold\":50,\"aggressiveness\":\"MODERATE\"}";
-
+    private static final String DEPLOYMENT_NOT_FOUND_WITH_ID = "Deployment not found with id: ";
+    private static final String RAPP_TEMPLATE_NOT_FOUND= "RappTemplate not found";
     /**
      * Conflicting rApp pairs and their penalties.
      * Each entry: Set of two rApp names -> MetricDeltas penalty.
@@ -136,7 +137,7 @@ public class RappService {
     @Transactional
     public DeploymentResponse activate(Long deploymentId) {
         RappDeployment deployment = rappDeploymentRepository.findById(deploymentId)
-                .orElseThrow(() -> new EntityNotFoundException("Deployment not found with id: " + deploymentId));
+                .orElseThrow(() -> new EntityNotFoundException(DEPLOYMENT_NOT_FOUND_WITH_ID + deploymentId));
 
         if (deployment.getStatus() != DeploymentStatus.DEPLOYING) {
             throw new InvalidStateException("Cannot activate deployment that is not in DEPLOYING status");
@@ -146,7 +147,7 @@ public class RappService {
         deployment = rappDeploymentRepository.save(deployment);
 
         RappTemplate template = rappTemplateRepository.findById(deployment.getTemplateId())
-                .orElseThrow(() -> new EntityNotFoundException("RappTemplate not found"));
+                .orElseThrow(() -> new EntityNotFoundException(RAPP_TEMPLATE_NOT_FOUND));
 
         return toDeploymentResponse(deployment, template.getName(), null);
     }
@@ -159,7 +160,7 @@ public class RappService {
         Player player = playerService.validateToken(token);
 
         RappDeployment deployment = rappDeploymentRepository.findById(deploymentId)
-                .orElseThrow(() -> new EntityNotFoundException("Deployment not found with id: " + deploymentId));
+                .orElseThrow(() -> new EntityNotFoundException(DEPLOYMENT_NOT_FOUND_WITH_ID + deploymentId));
 
         if (!deployment.getPlayerId().equals(player.getId())) {
             throw new ForbiddenException("Player does not own this deployment");
@@ -170,7 +171,7 @@ public class RappService {
         }
 
         RappTemplate template = rappTemplateRepository.findById(deployment.getTemplateId())
-                .orElseThrow(() -> new EntityNotFoundException("RappTemplate not found"));
+                .orElseThrow(() -> new EntityNotFoundException(RAPP_TEMPLATE_NOT_FOUND));
 
         // Calculate current impact and negate it
         Aggressiveness aggressiveness = parseAggressiveness(deployment.getConfiguration());
@@ -198,7 +199,7 @@ public class RappService {
         Player player = playerService.validateToken(token);
 
         RappDeployment deployment = rappDeploymentRepository.findById(deploymentId)
-                .orElseThrow(() -> new EntityNotFoundException("Deployment not found with id: " + deploymentId));
+                .orElseThrow(() -> new EntityNotFoundException(DEPLOYMENT_NOT_FOUND_WITH_ID + deploymentId));
 
         if (!deployment.getPlayerId().equals(player.getId())) {
             throw new ForbiddenException("Player does not own this deployment");
@@ -209,7 +210,7 @@ public class RappService {
         }
 
         RappTemplate template = rappTemplateRepository.findById(deployment.getTemplateId())
-                .orElseThrow(() -> new EntityNotFoundException("RappTemplate not found"));
+                .orElseThrow(() -> new EntityNotFoundException(RAPP_TEMPLATE_NOT_FOUND));
 
         RappBehaviour behaviour = rappBehaviourRegistry.getBehaviour(template.getName());
 
@@ -254,7 +255,7 @@ public class RappService {
         Player player = playerService.validateToken(token);
 
         RappDeployment deployment = rappDeploymentRepository.findById(deploymentId)
-                .orElseThrow(() -> new EntityNotFoundException("Deployment not found with id: " + deploymentId));
+                .orElseThrow(() -> new EntityNotFoundException(DEPLOYMENT_NOT_FOUND_WITH_ID + deploymentId));
 
         if (!deployment.getPlayerId().equals(player.getId())) {
             throw new ForbiddenException("Player does not own this deployment");
@@ -269,7 +270,7 @@ public class RappService {
         }
 
         RappTemplate template = rappTemplateRepository.findById(deployment.getTemplateId())
-                .orElseThrow(() -> new EntityNotFoundException("RappTemplate not found"));
+                .orElseThrow(() -> new EntityNotFoundException(RAPP_TEMPLATE_NOT_FOUND));
 
         RappBehaviour behaviour = rappBehaviourRegistry.getBehaviour(template.getName());
 
