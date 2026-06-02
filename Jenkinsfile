@@ -30,6 +30,9 @@ pipeline {
         }
 
         stage('SonarQube') {
+            when {
+                expression { env.GIT_BRANCH == 'development' || env.GIT_BRANCH == 'origin/development' || env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'origin/main' }
+            }
             steps {
                 dir('backend') {
                     sh """
@@ -48,12 +51,15 @@ pipeline {
                 sh "docker build -t ${IMAGE_BACKEND} ./backend"
                 sh "docker build -t ${IMAGE_EVENT_GENERATOR} ./event-generator"
                 sh "docker build -t ${IMAGE_FRONTEND} ./frontend"
+                sh "kind load docker-image ${IMAGE_BACKEND}"
+                sh "kind load docker-image ${IMAGE_EVENT_GENERATOR}"
+                sh "kind load docker-image ${IMAGE_FRONTEND}"
             }
         }
 
         stage('Deploy') {
             when {
-                branch 'main'
+                expression { env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'origin/main' }
             }
             steps {
                 sh "kubectl set image deployment/backend backend=${IMAGE_BACKEND}"
