@@ -16,12 +16,12 @@ const sideClasses: Record<NonNullable<TooltipProps['side']>, string> = {
   left:   'right-full top-1/2 -translate-y-1/2 mr-2',
 };
 
-const sideMotion: Record<NonNullable<TooltipProps['side']>, { initial: object; animate: object }> = {
+const sideMotion = {
   top:    { initial: { opacity: 0, y: 4  }, animate: { opacity: 1, y: 0  } },
   bottom: { initial: { opacity: 0, y: -4 }, animate: { opacity: 1, y: 0  } },
   right:  { initial: { opacity: 0, x: -4 }, animate: { opacity: 1, x: 0  } },
   left:   { initial: { opacity: 0, x: 4  }, animate: { opacity: 1, x: 0  } },
-};
+} as const;
 
 export function Tooltip({ content, children, className = '', side = 'top' }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);

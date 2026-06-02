@@ -184,6 +184,9 @@ function GamePageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);
 
+  // When WebSocket connects/reconnects, refetch basestations to catch missed events
+  const wsConnected = ws.connected;
+
   useEffect(() => {
     if (gameState === 'completed') playGameEnd();
   }, [gameState, playGameEnd]);
@@ -219,6 +222,22 @@ function GamePageInner() {
   }, [sessionCode, token]);
 
   useEffect(() => { fetchBasestations(); }, [fetchBasestations]);
+
+  // Refetch when WebSocket connects/reconnects to catch missed events
+  useEffect(() => {
+    if (wsConnected) {
+      fetchBasestations();
+    }
+  }, [wsConnected, fetchBasestations]);
+
+  // Periodic basestations poll — safety net for missed WebSocket events
+  useEffect(() => {
+    if (gameState !== 'active') return;
+    const interval = setInterval(() => {
+      fetchBasestations();
+    }, 10000); // every 10 seconds
+    return () => clearInterval(interval);
+  }, [gameState, fetchBasestations]);
 
   const fetchCatalogue = useCallback(() => {
     if (!token) return;

@@ -26,8 +26,25 @@ export function useGameSubscriptions(
   const { sessionCode, playerId, setGameState, setFinalLeaderboard: setContextFinalLeaderboard } = useGame();
   const navigate = useNavigate();
   const subscriptionsRef = useRef<StompSubscription[]>([]);
+
+  // Store all mutable references in refs to avoid effect re-runs
   const callbacksRef = useRef<GameSubscriptionCallbacks | undefined>(callbacks);
   callbacksRef.current = callbacks;
+
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+
+  const wsRef = useRef(ws);
+  wsRef.current = ws;
+
+  const setGameStateRef = useRef(setGameState);
+  setGameStateRef.current = setGameState;
+
+  const setContextFinalLeaderboardRef = useRef(setContextFinalLeaderboard);
+  setContextFinalLeaderboardRef.current = setContextFinalLeaderboard;
+
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
     if (!ws.connected || !sessionCode || !playerId) return;
@@ -39,15 +56,15 @@ export function useGameSubscriptions(
     }
 
     // Subscribe to game-wide broadcasts (GAME_STARTED, GAME_ENDED)
-    const gameSub = ws.subscribe(`/topic/session/${sessionCode}/game`, (msg) => {
+    const gameSub = wsRef.current.subscribe(`/topic/session/${sessionCode}/game`, (msg) => {
       const data = parseMessage(msg);
       switch (data.type) {
         case 'GAME_STARTED':
-          setGameState('active');
-          navigate('/game');
+          setGameStateRef.current('active');
+          navigateRef.current('/game');
           break;
         case 'GAME_ENDED': {
-          setGameState('completed');
+          setGameStateRef.current('completed');
           const payload = data.payload as {
             finalLeaderboard?: Array<{
               rank: number;
@@ -58,10 +75,10 @@ export function useGameSubscriptions(
             }>;
           };
           if (payload.finalLeaderboard) {
-            gameState.setFinalLeaderboard(payload.finalLeaderboard);
-            setContextFinalLeaderboard(payload.finalLeaderboard);
+            gameStateRef.current.setFinalLeaderboard(payload.finalLeaderboard);
+            setContextFinalLeaderboardRef.current(payload.finalLeaderboard);
           }
-          navigate('/results');
+          navigateRef.current('/results');
           break;
         }
       }
@@ -69,7 +86,7 @@ export function useGameSubscriptions(
     if (gameSub) subs.push(gameSub);
 
     // Subscribe to leaderboard updates
-    const leaderboardSub = ws.subscribe(
+    const leaderboardSub = wsRef.current.subscribe(
       `/topic/session/${sessionCode}/leaderboard`,
       (msg) => {
         const data = parseMessage(msg);
@@ -83,14 +100,14 @@ export function useGameSubscriptions(
               scores: { money: number; customerSatisfaction: number; networkStability: number };
             }>;
           };
-          gameState.updateLeaderboard({ leaderboard: payload.leaderboard });
+          gameStateRef.current.updateLeaderboard({ leaderboard: payload.leaderboard });
         }
       },
     );
     if (leaderboardSub) subs.push(leaderboardSub);
 
     // Subscribe to player-specific metrics
-    const metricsSub = ws.subscribe(
+    const metricsSub = wsRef.current.subscribe(
       `/topic/session/${sessionCode}/player/${playerId}/metrics`,
       (msg) => {
         const data = parseMessage(msg);
@@ -107,14 +124,14 @@ export function useGameSubscriptions(
               slaCompliance: number;
             };
           };
-          gameState.updateMetrics(payload);
+          gameStateRef.current.updateMetrics(payload);
         }
       },
     );
     if (metricsSub) subs.push(metricsSub);
 
     // Subscribe to player-specific events
-    const eventsSub = ws.subscribe(
+    const eventsSub = wsRef.current.subscribe(
       `/topic/session/${sessionCode}/player/${playerId}/events`,
       (msg) => {
         const data = parseMessage(msg);
@@ -135,7 +152,7 @@ export function useGameSubscriptions(
               slaCompliance: number;
             };
           };
-          gameState.addEvent(payload);
+          gameStateRef.current.addEvent(payload);
           callbacksRef.current?.onEventReceived?.(payload);
         }
       },
@@ -143,7 +160,7 @@ export function useGameSubscriptions(
     if (eventsSub) subs.push(eventsSub);
 
     // Subscribe to player-specific rApp status changes
-    const rappsSub = ws.subscribe(
+    const rappsSub = wsRef.current.subscribe(
       `/topic/session/${sessionCode}/player/${playerId}/rapps`,
       (msg) => {
         const data = parseMessage(msg);
@@ -156,7 +173,7 @@ export function useGameSubscriptions(
             newStatus: string;
             version: number;
           };
-          gameState.updateRappStatus(payload);
+          gameStateRef.current.updateRappStatus(payload);
         }
       },
     );
@@ -168,5 +185,7 @@ export function useGameSubscriptions(
       subs.forEach((sub) => sub.unsubscribe());
       subscriptionsRef.current = [];
     };
-  }, [ws.connected, sessionCode, playerId, ws, gameState, setGameState, setContextFinalLeaderboard, navigate]);
+    // Only re-subscribe when the connection state or identity changes
+    // NOT when gameState/ws objects change (those are accessed via refs)
+  }, [ws.connected, sessionCode, playerId]);
 }
