@@ -52,9 +52,9 @@ game:
     per-player: 3
   score:
     weight:
-      money: 0.30
-      satisfaction: 0.35
-      stability: 0.35
+      money: 0.10
+      satisfaction: 0.45
+      stability: 0.45
   events:
     base-rate: 0.3
     player-multiplier: 0.2

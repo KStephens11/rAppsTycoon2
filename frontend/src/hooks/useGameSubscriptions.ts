@@ -73,10 +73,18 @@ export function useGameSubscriptions(
               compositeScore: number;
               scores: { money: number; customerSatisfaction: number; networkStability: number };
             }>;
+            leaderboard?: Array<{
+              rank: number;
+              playerId: number;
+              displayName: string;
+              compositeScore: number;
+              scores: { money: number; customerSatisfaction: number; networkStability: number };
+            }>;
           };
-          if (payload.finalLeaderboard) {
-            gameStateRef.current.setFinalLeaderboard(payload.finalLeaderboard);
-            setContextFinalLeaderboardRef.current(payload.finalLeaderboard);
+          const leaderboardData = payload.finalLeaderboard || payload.leaderboard;
+          if (leaderboardData) {
+            gameStateRef.current.setFinalLeaderboard(leaderboardData);
+            setContextFinalLeaderboardRef.current(leaderboardData);
           }
           navigateRef.current('/results');
           break;
