@@ -324,7 +324,6 @@ public class GameTickEngine {
     }
 
     boolean shouldEscalate(EventSeverity severity, int currentTick) {
-        if (currentTick == 0) return false;
         return switch (severity) {
             case LOW -> currentTick % 3 == 0;
             case MEDIUM -> currentTick % 2 == 0;
