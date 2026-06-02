@@ -96,7 +96,7 @@ class GameSessionControllerTest {
                     List.of(
                             new PlayerDto(1L, "Host", null, true, true),
                             new PlayerDto(2L, "NewPlayer", null, false, true)
-                    )
+                    ), 0, 60
             );
             JoinResponse joinResponse = new JoinResponse(playerDto, sessionResponse);
 
@@ -171,7 +171,7 @@ class GameSessionControllerTest {
                     List.of(
                             new PlayerDto(1L, "Host", null, true, true),
                             new PlayerDto(2L, "Player2", null, false, true)
-                    )
+                    ), 0, 60
             );
 
             when(gameSessionService.startSession("ABCD1234", "validtoken123")).thenReturn(sessionResponse);
@@ -224,7 +224,7 @@ class GameSessionControllerTest {
         void returns200WithValidToken() throws Exception {
             SessionResponse sessionResponse = new SessionResponse(
                     "ABCD1234", "LOBBY", 6, LocalDateTime.now(), null, null,
-                    List.of(new PlayerDto(1L, "Host", null, true, true))
+                    List.of(new PlayerDto(1L, "Host", null, true, true)), 0, 60
             );
 
             when(gameSessionService.getSession("ABCD1234", "validtoken123")).thenReturn(sessionResponse);

@@ -52,11 +52,13 @@ interface RealTimeGameState {
   events: GameEvent[];
   rappDeployments: RappDeployment[];
   finalLeaderboard: LeaderboardEntry[] | null;
+  currentTick: number;
+  totalTicks: number;
 }
 
 type GameStateAction =
   | { type: 'UPDATE_METRICS'; payload: { basestationId: number; basestationName: string; metrics: BasestationMetrics } }
-  | { type: 'UPDATE_LEADERBOARD'; payload: { leaderboard: LeaderboardEntry[] } }
+  | { type: 'UPDATE_LEADERBOARD'; payload: { leaderboard: LeaderboardEntry[]; currentTick: number; totalTicks: number } }
   | { type: 'ADD_EVENT'; payload: GameEvent }
   | { type: 'UPDATE_RAPP_STATUS'; payload: RappDeployment }
   | { type: 'SET_FINAL_LEADERBOARD'; payload: LeaderboardEntry[] }
@@ -68,6 +70,8 @@ const initialState: RealTimeGameState = {
   events: [],
   rappDeployments: [],
   finalLeaderboard: null,
+  currentTick: 0,
+  totalTicks: 60,
 };
 
 function gameStateReducer(state: RealTimeGameState, action: GameStateAction): RealTimeGameState {
@@ -89,7 +93,12 @@ function gameStateReducer(state: RealTimeGameState, action: GameStateAction): Re
       };
     }
     case 'UPDATE_LEADERBOARD':
-      return { ...state, leaderboard: action.payload.leaderboard };
+      return {
+        ...state,
+        leaderboard: action.payload.leaderboard,
+        currentTick: action.payload.currentTick,
+        totalTicks: action.payload.totalTicks,
+      };
     case 'ADD_EVENT':
       return { ...state, events: [...state.events, action.payload] };
     case 'UPDATE_RAPP_STATUS': {
@@ -123,9 +132,12 @@ export function useGameState() {
     [],
   );
 
-  const updateLeaderboard = useCallback((payload: { leaderboard: LeaderboardEntry[] }) => {
-    dispatch({ type: 'UPDATE_LEADERBOARD', payload });
-  }, []);
+  const updateLeaderboard = useCallback(
+    (payload: { leaderboard: LeaderboardEntry[]; currentTick: number; totalTicks: number }) => {
+      dispatch({ type: 'UPDATE_LEADERBOARD', payload });
+    },
+    [],
+  );
 
   const addEvent = useCallback((payload: GameEvent) => {
     dispatch({ type: 'ADD_EVENT', payload });

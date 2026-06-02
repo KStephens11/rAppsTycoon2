@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AlertTriangle, Sliders, Power, RotateCcw, X } from 'lucide-react';
 import { MetricBar, type MetricKey } from './MetricBar';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ui';
 import type { BasestationDetailData } from './BasestationDetail';
 
 export interface BasestationPopoverProps {
@@ -185,18 +185,18 @@ export function BasestationPopover({
     <div
       ref={popoverRef}
       data-testid="basestation-popover"
-      className="absolute z-30 bg-surface border border-surface-lighter rounded-lg shadow-xl overflow-hidden"
+      className="absolute z-30 bg-surface border border-surface-lighter rounded-lg shadow-xl flex flex-col"
       style={{
         left: position.left,
         top: position.top,
         width: POPOVER_WIDTH,
-        maxHeight: '80%',
+        maxHeight: 'min(80vh, 600px)',
       }}
       role="dialog"
       aria-label={`${basestation.name} details`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-lighter bg-surface-light">
+      {/* Header — fixed, never scrolls away */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-lighter bg-surface-light shrink-0 rounded-t-lg">
         <h3 className="text-sm font-semibold text-text truncate">{basestation.name}</h3>
         <button
           onClick={onClose}
@@ -207,8 +207,8 @@ export function BasestationPopover({
         </button>
       </div>
 
-      {/* Scrollable content */}
-      <div className="overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(80vh - 48px)' }}>
+      {/* Scrollable content — takes remaining height and scrolls */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {/* Metrics */}
         <div className="space-y-0.5">
           {metricKeys.map((key) => (
@@ -225,70 +225,70 @@ export function BasestationPopover({
             <p className="text-xs text-text-muted">No rApps deployed</p>
           ) : (
             <div className="space-y-1.5">
-              {basestation.deployedRapps.map((rapp) => (
-                <div
-                  key={rapp.id}
-                  className="p-2 rounded bg-surface-light"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-text truncate">
-                          {rapp.name}
-                        </span>
-                        <span className="text-xs text-text-muted">v{rapp.version}</span>
+                {basestation.deployedRapps.map((rapp) => (
+                  <div
+                    key={rapp.id}
+                    className="p-2 rounded bg-surface-light"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs font-medium text-text truncate">
+                            {rapp.name}
+                          </span>
+                          <span className="text-xs text-text-muted shrink-0">· v{rapp.version}</span>
+                        </div>
+                        {rapp.configuration?.aggressiveness && (
+                          <span className="text-xs text-text-muted">
+                            {rapp.configuration.aggressiveness}
+                          </span>
+                        )}
                       </div>
-                      {rapp.configuration?.aggressiveness && (
-                        <span className="text-xs text-text-muted">
-                          {rapp.configuration.aggressiveness}
-                        </span>
-                      )}
+                      {getRappStatusBadge(rapp.status)}
                     </div>
-                    {getRappStatusBadge(rapp.status)}
-                  </div>
-                  {/* Management actions for ACTIVE rApps */}
-                  {rapp.status === 'ACTIVE' && (
-                    <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-surface-lighter">
-                      <button
-                        onClick={() =>
-                          handleTune(
-                            rapp.id,
-                            rapp.name,
-                            rapp.configuration?.threshold,
-                            rapp.configuration?.aggressiveness,
-                          )
-                        }
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary bg-primary/10 rounded hover:bg-primary/20 transition-colors cursor-pointer"
-                        title="Tune configuration"
-                        aria-label={`Tune ${rapp.name} configuration`}
-                      >
-                        <Sliders size={10} aria-hidden="true" />
-                        Tune
-                      </button>
-                      <button
-                        onClick={() => onDisable(rapp.id)}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-warning bg-warning/10 rounded hover:bg-warning/20 transition-colors cursor-pointer"
-                        title="Disable rApp"
-                        aria-label={`Disable ${rapp.name}`}
-                      >
-                        <Power size={10} aria-hidden="true" />
-                        Disable
-                      </button>
-                      {rapp.version > 1 && (
+                    {/* Management actions for ACTIVE rApps */}
+                    {rapp.status === 'ACTIVE' && (
+                      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-surface-lighter">
                         <button
-                          onClick={() => onRollback(rapp.id)}
-                          className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted bg-surface-lighter rounded hover:bg-surface-light transition-colors cursor-pointer"
-                          title="Rollback to previous version"
-                          aria-label={`Rollback ${rapp.name} to previous version`}
+                          onClick={() =>
+                            handleTune(
+                              rapp.id,
+                              rapp.name,
+                              rapp.configuration?.threshold,
+                              rapp.configuration?.aggressiveness,
+                            )
+                          }
+                          className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary bg-primary/10 rounded hover:bg-primary/20 transition-colors cursor-pointer"
+                          title="Tune configuration"
+                          aria-label={`Tune ${rapp.name} configuration`}
                         >
-                          <RotateCcw size={10} aria-hidden="true" />
-                          Rollback
+                          <Sliders size={10} aria-hidden="true" />
+                          Tune
                         </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        <button
+                          onClick={() => onDisable(rapp.id)}
+                          className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-warning bg-warning/10 rounded hover:bg-warning/20 transition-colors cursor-pointer"
+                          title="Disable rApp"
+                          aria-label={`Disable ${rapp.name}`}
+                        >
+                          <Power size={10} aria-hidden="true" />
+                          Disable
+                        </button>
+                        {rapp.version > 1 && (
+                          <button
+                            onClick={() => onRollback(rapp.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted bg-surface-lighter rounded hover:bg-surface-light transition-colors cursor-pointer"
+                            title="Rollback to previous version"
+                            aria-label={`Rollback ${rapp.name} to previous version`}
+                          >
+                            <RotateCcw size={10} aria-hidden="true" />
+                            Rollback
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
             </div>
           )}
         </div>

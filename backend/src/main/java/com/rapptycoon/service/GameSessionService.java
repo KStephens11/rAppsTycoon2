@@ -202,7 +202,9 @@ public class GameSessionService {
                 session.getCreatedAt(),
                 session.getStartedAt(),
                 session.getEndedAt(),
-                playerDtos
+                playerDtos,
+                session.getCurrentTick(),
+                gameProperties.getTick().getTotal()
         );
     }
 
