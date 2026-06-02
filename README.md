@@ -12,7 +12,9 @@ Frontend (React) ↔ Backend (Spring Boot) ↔ MySQL
 
 ## Prerequisites
 
-- Docker Desktop
+- Docker Desktop (with Kubernetes enabled)
+- kind (for local Kubernetes)
+- Jenkins
 
 ## Local Development
 
@@ -28,17 +30,18 @@ The default `.env` values work out of the box for local development. No changes 
 docker compose up --build
 ```
 
-Services start in order: MySQL → Backend → Event Generator.
+Services start in order: MySQL → Backend → Event Generator → Frontend.
 
 **3. Verify**
 ```bash
 docker compose ps
 ```
 
-All three services should be running:
+All services should be running:
 - `rapp-mysql` — `healthy`
 - `rapp-backend` — `healthy`
 - `rapp-event-generator` — `Up`
+- `rapp-frontend` — `Up`
 
 Backend health check:
 ```bash
@@ -59,6 +62,7 @@ curl http://localhost:8080/actuator/health
 
 | Service | Port | Description |
 |---------|------|-------------|
+| Frontend | `3001` | React app served via Nginx (Docker) |
 | Backend API | `8080` | Spring Boot REST API + WebSocket |
 | MySQL | `3307` | Database (mapped from internal 3306) |
 
@@ -75,6 +79,51 @@ Base URL: `http://localhost:8080`
 | GET | `/api/rapps/catalogue` | List available rApps |
 | GET | `/actuator/health` | Health check |
 
+## Kubernetes
+
+Apply all manifests:
+```bash
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/mysql-pvc.yaml
+kubectl apply -f k8s/mysql-deployment.yaml
+kubectl apply -f k8s/mysql-service.yaml
+kubectl apply -f k8s/backend-deployment.yaml
+kubectl apply -f k8s/backend-service.yaml
+kubectl apply -f k8s/event-generator-deployment.yaml
+kubectl apply -f k8s/frontend-deployment.yaml
+kubectl apply -f k8s/frontend-service.yaml
+```
+
+Verify all pods are running:
+```bash
+kubectl get pods
+kubectl get services
+```
+
+Access the frontend (NodePort does not work with kind, use port-forward):
+```bash
+kubectl port-forward service/frontend 8081:80
+```
+
+Then open `http://localhost:8081`.
+
+## Jenkins
+
+The `Jenkinsfile` at the root defines the CI/CD pipeline with the following stages:
+
+| Stage | Description |
+|-------|-------------|
+| Checkout | Pulls latest code |
+| Test | Runs backend unit tests |
+| SonarQube | Static analysis via SonarCloud |
+| Build Images | Builds Docker images for backend, event-generator, and frontend |
+| Deploy | Deploys to Kubernetes on `main` branch |
+
+Images built:
+- `rapp-backend:${BUILD_NUMBER}`
+- `rapp-event-generator:${BUILD_NUMBER}`
+- `rapp-tycoon-frontend:${BUILD_NUMBER}`
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -85,4 +134,4 @@ Base URL: `http://localhost:8080`
 | Database | MySQL 8.4 |
 | Containerisation | Docker |
 | Orchestration | Kubernetes (see `k8s/`) |
-| CI | GitHub Actions + SonarCloud |
+| CI/CD | Jenkins + GitHub Actions + SonarCloud |
