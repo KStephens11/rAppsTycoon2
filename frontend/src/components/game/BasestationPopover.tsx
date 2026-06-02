@@ -13,7 +13,7 @@ export interface BasestationPopoverProps {
   onRollback: (rappId: number) => void;
 }
 
-const RIGHT_PANEL_WIDTH = 288; // w-72 = 18rem = 288px
+const RIGHT_PANEL_WIDTH = 224; // w-56 = 14rem = 224px (scoreboard panel)
 const POPOVER_WIDTH = 320;
 const POPOVER_OFFSET_X = 60;
 const POPOVER_OFFSET_Y = -40;
