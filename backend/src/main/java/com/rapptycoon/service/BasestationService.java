@@ -56,17 +56,28 @@ public class BasestationService {
         int perPlayer = gameProperties.getBasestations().getPerPlayer();
         List<Basestation> allBasestations = new ArrayList<>();
 
+        // Predefined scattered positions for up to 18 basestations (6 players × 3)
+        int[][] scatteredPositions = {
+            {120, 280}, {350, 150}, {250, 420},
+            {480, 320}, {150, 500}, {400, 480},
+            {550, 150}, {100, 100}, {320, 300},
+            {500, 500}, {200, 200}, {450, 100},
+            {300, 550}, {550, 400}, {180, 380},
+            {420, 220}, {80, 450}, {530, 550}
+        };
+
         int nameIndex = 0;
+        int posIndex = 0;
         for (int playerIdx = 0; playerIdx < players.size(); playerIdx++) {
             Player player = players.get(playerIdx);
-            int baseX = 100 + (playerIdx * 300);
 
             for (int bsIdx = 0; bsIdx < perPlayer; bsIdx++) {
                 String name = BASESTATION_NAMES[nameIndex % BASESTATION_NAMES.length];
                 nameIndex++;
 
-                int posX = baseX + (bsIdx * 100);
-                int posY = 150 + (bsIdx * 100);
+                int posX = scatteredPositions[posIndex % scatteredPositions.length][0];
+                int posY = scatteredPositions[posIndex % scatteredPositions.length][1];
+                posIndex++;
 
                 Basestation basestation = Basestation.builder()
                         .playerId(player.getId())
