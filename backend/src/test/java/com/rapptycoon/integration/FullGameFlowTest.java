@@ -86,7 +86,7 @@ class FullGameFlowTest {
 
         JsonNode bsResponse = objectMapper.readTree(bsResult.getResponse().getContentAsString());
         JsonNode basestations = bsResponse.get("basestations");
-        assertThat(basestations.size()).isEqualTo(3);
+        assertThat(basestations.size()).isEqualTo(4);
 
         // Verify default metrics on first basestation
         JsonNode firstBs = basestations.get(0);
@@ -106,7 +106,7 @@ class FullGameFlowTest {
                 .andReturn();
 
         JsonNode bs2Response = objectMapper.readTree(bs2Result.getResponse().getContentAsString());
-        assertThat(bs2Response.get("basestations").size()).isEqualTo(3);
+        assertThat(bs2Response.get("basestations").size()).isEqualTo(4);
 
         // 5. Get catalogue → verify 7 rApps
         MvcResult catalogueResult = mockMvc.perform(get("/api/rapps/catalogue")

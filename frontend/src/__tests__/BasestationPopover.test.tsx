@@ -90,9 +90,9 @@ describe('BasestationPopover', () => {
     it('renders deployed rApps with names and versions', () => {
       renderPopover();
       expect(screen.getByText('Energy Optimizer')).toBeInTheDocument();
-      expect(screen.getByText('v2')).toBeInTheDocument();
+      expect(screen.getByText('· v2')).toBeInTheDocument();
       expect(screen.getByText('Load Balancer')).toBeInTheDocument();
-      expect(screen.getByText('v1')).toBeInTheDocument();
+      expect(screen.getByText('· v1')).toBeInTheDocument();
     });
 
     it('renders rApp status badges', () => {

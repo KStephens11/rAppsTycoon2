@@ -226,7 +226,7 @@ describe('GamePage simultaneous panel layout', () => {
     expect(rightPanel).toHaveClass('border-l');
 
     // Bottom bar exists with correct structure
-    const bottomBar = container.querySelector('.h-36') || container.querySelector('.h-56');
+    const bottomBar = container.querySelector('.h-36') || container.querySelector('.h-56') || container.querySelector('.h-52');
     expect(bottomBar).toBeInTheDocument();
     expect(bottomBar).toHaveClass('border-t');
 

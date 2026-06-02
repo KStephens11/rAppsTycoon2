@@ -36,22 +36,22 @@ class GamePropertiesTest {
 
     @Test
     void basestationsPerPlayerIsLoaded() {
-        assertThat(gameProperties.getBasestations().getPerPlayer()).isEqualTo(3);
+        assertThat(gameProperties.getBasestations().getPerPlayer()).isEqualTo(4);
     }
 
     @Test
     void scoreWeightMoneyIsLoaded() {
-        assertThat(gameProperties.getScore().getWeight().getMoney()).isEqualTo(0.30);
+        assertThat(gameProperties.getScore().getWeight().getMoney()).isEqualTo(0.10);
     }
 
     @Test
     void scoreWeightSatisfactionIsLoaded() {
-        assertThat(gameProperties.getScore().getWeight().getSatisfaction()).isEqualTo(0.35);
+        assertThat(gameProperties.getScore().getWeight().getSatisfaction()).isEqualTo(0.45);
     }
 
     @Test
     void scoreWeightStabilityIsLoaded() {
-        assertThat(gameProperties.getScore().getWeight().getStability()).isEqualTo(0.35);
+        assertThat(gameProperties.getScore().getWeight().getStability()).isEqualTo(0.45);
     }
 
     @Test
