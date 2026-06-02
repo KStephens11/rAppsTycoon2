@@ -7,6 +7,8 @@ import {
   Settings,
   GitBranch,
   BellOff,
+  Lightbulb,
+  AlertOctagon,
   type LucideIcon,
 } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
@@ -15,6 +17,7 @@ import { apiGet } from '../../services/api';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { CatalogueSkeleton } from '../ui/Skeleton';
+import { Tooltip } from '../ui/Tooltip';
 import { DeploymentPicker } from './DeploymentPicker';
 
 export interface RappTemplate {
@@ -52,6 +55,77 @@ const rappIcons: Record<string, LucideIcon> = {
 
 function getRappIcon(name: string): LucideIcon {
   return rappIcons[name] || Settings;
+}
+
+const rappHelpfulWhen: Record<string, string[]> = {
+  'Energy Saver': [
+    'Energy costs are rising or capacity is underused',
+    'Low-traffic periods where you can afford slight latency trade-offs',
+    'SLA compliance is healthy and you want to improve cost score',
+  ],
+  'Capacity Optimiser': [
+    'Traffic spikes are causing congestion or dropped connections',
+    'Customer satisfaction is falling due to overloaded cells',
+    'After deploying Energy Saver to offset its latency side-effects',
+  ],
+  'Fault Predictor': [
+    'Hardware failure events are appearing on basestations',
+    'Automation reliability is declining unexpectedly',
+    'You want early warning before incidents escalate to CRITICAL',
+  ],
+  'SLA Guardian': [
+    'SLA compliance is below 80% or showing a downward trend',
+    'Security breach or high-severity events are active',
+    'You need to protect customer experience during busy periods',
+  ],
+  'Configuration Drift Detector': [
+    'Automation reliability metrics are drifting without clear cause',
+    'After rolling back another rApp that may have left stale config',
+    'Multiple rApps are deployed and you suspect conflicts',
+  ],
+  'Traffic Balancer': [
+    'Network congestion events are active across multiple cells',
+    'One basestation is overloaded while others are idle',
+    'Weather or traffic-spike incidents are degrading handovers',
+  ],
+  'Alarm Noise Reducer': [
+    'The incident feed is flooded with LOW or MEDIUM severity alerts',
+    'You need to focus on CRITICAL events without distraction',
+    'Automation reliability is suffering from alert fatigue',
+  ],
+};
+
+function RappTooltipContent({ rapp }: { rapp: RappTemplate }) {
+  const situations = rappHelpfulWhen[rapp.name] ?? [];
+  return (
+    <div className="p-3 space-y-2.5">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Purpose</p>
+        <p className="text-xs text-text leading-snug">{rapp.purpose}</p>
+      </div>
+      {rapp.sideEffects && (
+        <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-danger/10 border border-danger/20">
+          <AlertOctagon size={11} className="shrink-0 mt-0.5 text-danger/70" />
+          <p className="text-[11px] text-danger/80 leading-snug">{rapp.sideEffects}</p>
+        </div>
+      )}
+      {situations.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+            Helpful when…
+          </p>
+          <ul className="space-y-1">
+            {situations.map((s) => (
+              <li key={s} className="flex items-start gap-1.5">
+                <Lightbulb size={11} className="shrink-0 mt-0.5 text-amber-400/80" />
+                <span className="text-[11px] text-text-muted leading-snug">{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function RiskIndicator({ value, label }: { value: number; label: string }) {
@@ -144,59 +218,65 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
         const Icon = getRappIcon(rapp.name);
         const isDragging = dragState?.templateId === rapp.id;
         return (
-          <div
+          <Tooltip
             key={rapp.id}
-            draggable
-            tabIndex={0}
-            role="button"
-            aria-label={`Deploy ${rapp.name} - €${rapp.cost}`}
-            onDragStart={(e) => handleDragStart(e, rapp)}
-            onDragEnd={handleDragEnd}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (basestationsProp && onConfirmDeploy) {
-                  setPickerOpenForId(rapp.id);
-                } else {
-                  onDeploy?.(rapp);
-                }
-              }
-            }}
-            className={`relative p-3 rounded-lg bg-surface-light border border-surface-lighter hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-grab ${isDragging ? 'opacity-50' : ''}`}
+            content={<RappTooltipContent rapp={rapp} />}
+            side="right"
+            className="block"
           >
-            <div className="flex items-start gap-2.5">
-              <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                <Icon size={16} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-sm font-semibold text-text truncate">
-                    {rapp.name}
-                  </span>
-                  <Badge variant="warning">€{rapp.cost}</Badge>
+            <div
+              draggable
+              tabIndex={0}
+              role="button"
+              aria-label={`Deploy ${rapp.name} - €${rapp.cost}`}
+              onDragStart={(e) => handleDragStart(e, rapp)}
+              onDragEnd={handleDragEnd}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (basestationsProp && onConfirmDeploy) {
+                    setPickerOpenForId(rapp.id);
+                  } else {
+                    onDeploy?.(rapp);
+                  }
+                }
+              }}
+              className={`relative p-3 rounded-lg bg-surface-light border border-surface-lighter hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-grab ${isDragging ? 'opacity-50' : ''}`}
+            >
+              <div className="flex items-start gap-2.5">
+                <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Icon size={16} className="text-primary" />
                 </div>
-                <p className="text-xs text-text-muted line-clamp-1 mb-1.5">
-                  {rapp.benefit}
-                </p>
-                <div className="flex items-center gap-3">
-                  <RiskIndicator value={rapp.risk} label="Risk" />
-                  <RiskIndicator value={100 - rapp.confidence} label="Conf" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold text-text truncate">
+                      {rapp.name}
+                    </span>
+                    <Badge variant="warning">€{rapp.cost}</Badge>
+                  </div>
+                  <p className="text-xs text-text-muted line-clamp-1 mb-1.5">
+                    {rapp.benefit}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <RiskIndicator value={rapp.risk} label="Risk" />
+                    <RiskIndicator value={100 - rapp.confidence} label="Conf" />
+                  </div>
                 </div>
               </div>
+              {pickerOpenForId === rapp.id && basestationsProp && onConfirmDeploy && (
+                <DeploymentPicker
+                  templateId={rapp.id}
+                  templateName={rapp.name}
+                  basestations={basestationsProp}
+                  onSelect={(basestationId) => {
+                    onConfirmDeploy(rapp.id, basestationId);
+                    setPickerOpenForId(null);
+                  }}
+                  onClose={() => setPickerOpenForId(null)}
+                />
+              )}
             </div>
-            {pickerOpenForId === rapp.id && basestationsProp && onConfirmDeploy && (
-              <DeploymentPicker
-                templateId={rapp.id}
-                templateName={rapp.name}
-                basestations={basestationsProp}
-                onSelect={(basestationId) => {
-                  onConfirmDeploy(rapp.id, basestationId);
-                  setPickerOpenForId(null);
-                }}
-                onClose={() => setPickerOpenForId(null)}
-              />
-            )}
-          </div>
+          </Tooltip>
         );
       })}
     </div>

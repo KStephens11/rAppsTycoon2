@@ -315,9 +315,16 @@ export function BasestationModel({
         <ResolutionBurst />
       )}
 
-      {/* Hover tooltip */}
+      {/* Always-visible nameplate */}
+      <Html position={[0, -0.15, 0]} center sprite occlude={false} style={{ pointerEvents: 'none' }} zIndexRange={[1, 5]}>
+        <div className="px-1.5 py-0.5 rounded bg-slate-900/80 border border-slate-700/50 whitespace-nowrap">
+          <span className="text-[9px] font-medium text-white">{name}</span>
+        </div>
+      </Html>
+
+      {/* Hover tooltip — higher z-index so it renders over nameplate */}
       {hovered && (
-        <Html position={[0, 2.0, 0]} center>
+        <Html position={[0, 2.0, 0]} center zIndexRange={[10, 20]}>
           <div className="bg-slate-900/95 border border-slate-700 rounded-lg px-3 py-2 text-center whitespace-nowrap shadow-xl">
             <p className="text-white text-sm font-semibold">{name}</p>
             <p className="text-slate-400 text-xs">

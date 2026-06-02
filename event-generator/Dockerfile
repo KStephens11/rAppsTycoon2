@@ -10,8 +10,7 @@ RUN useradd -m -u 1000 appuser
 
 WORKDIR /app
 COPY --from=builder /install /usr/local
-COPY *.py .
-
+COPY *.py ./
 ENV PYTHONUNBUFFERED=1
 
 USER appuser

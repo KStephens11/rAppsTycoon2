@@ -166,7 +166,8 @@ public class ScoreService {
             ));
         }
 
-        return new LeaderboardResponse(entries, session.getState().name());
+        return new LeaderboardResponse(entries, session.getState().name(),
+                session.getCurrentTick(), gameProperties.getTick().getTotal());
     }
 
     /**
