@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: event-generator
+  template:
+    metadata:
+      labels:
+        app: event-generator
+    spec:
+      initContainers:
+        - name: wait-for-backend
+          image: busybox
+          command: ["sh", "-c", "until nc -z backend 8080; do sleep 2; done"]
+      containers:
+        - name: event-generator
+          image: rapp-event-generator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: BACKEND_BASE_URL
+              value: http://backend:8080
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rapp-secret
+                  key: INTERNAL_API_KEY
