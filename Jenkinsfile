@@ -46,7 +46,7 @@ pipeline {
         stage('SonarQube') {
             steps {
                 dir('backend') {
-                    withSonarQubeEnv('SonarCloud') {
+                    withSonarQubeEnv('LocalSonar') {
                         sh """
                             ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
                             -DskipITs \
