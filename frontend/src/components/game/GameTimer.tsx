@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Timer } from 'lucide-react';
 
 interface GameTimerProps {
-  /** ISO-8601 timestamp of when the game started (from server) */
-  startedAt: string;
-  /** Total game duration in seconds — defaults to 300 (60 ticks × 5 s) */
-  totalDurationSeconds?: number;
+  /** Current tick from the server */
+  currentTick: number;
+  /** Total ticks for the game */
+  totalTicks: number;
+  /** Tick interval in ms (default 5000) */
+  tickIntervalMs?: number;
 }
 
 function formatTime(seconds: number): string {
@@ -21,43 +23,42 @@ function getColour(fraction: number): { text: string; ring: string } {
   return { text: 'text-red-400', ring: 'bg-red-400' };
 }
 
-function parseUtcTimestamp(timestamp: string): number {
-  // LocalDateTime from Spring Boot serialises without a timezone (no Z, no +offset).
-  // Appending Z forces the browser to treat it as UTC, matching Date.now().
-  const normalised = /[Zz]$|[+-]\d{2}:\d{2}$/.test(timestamp)
-    ? timestamp
-    : `${timestamp}Z`;
-  return new Date(normalised).getTime();
-}
-
-function getRemainingSeconds(startedAt: string, totalDurationSeconds: number): number {
-  const startMs = parseUtcTimestamp(startedAt);
-  if (isNaN(startMs)) return totalDurationSeconds;
-  const elapsedSec = (Date.now() - startMs) / 1000;
-  return Math.max(0, totalDurationSeconds - elapsedSec);
-}
-
 export function GameTimer({
-  startedAt,
-  totalDurationSeconds = 300,
+  currentTick,
+  totalTicks,
+  tickIntervalMs = 5000,
 }: GameTimerProps) {
-  const [remainingSec, setRemainingSec] = useState(() =>
-    getRemainingSeconds(startedAt, totalDurationSeconds),
-  );
+  const tickIntervalSec = tickIntervalMs / 1000;
 
-  // Recalculate every second from the wall clock — survives refreshes perfectly
+  // Remaining ticks from server
+  const remainingTicks = Math.max(0, totalTicks - currentTick);
+
+  // Base remaining seconds from server state
+  const serverRemainingSec = remainingTicks * tickIntervalSec;
+
+  // Smooth interpolation: count down between server updates
+  const [displaySec, setDisplaySec] = useState(serverRemainingSec);
+  const lastServerUpdateRef = useRef(Date.now());
+  const lastServerSecRef = useRef(serverRemainingSec);
+
+  // When server data updates, reset the interpolation baseline
   useEffect(() => {
-    // Sync immediately when startedAt changes (e.g. fetched after mount)
-    setRemainingSec(getRemainingSeconds(startedAt, totalDurationSeconds));
+    lastServerUpdateRef.current = Date.now();
+    lastServerSecRef.current = serverRemainingSec;
+    setDisplaySec(serverRemainingSec);
+  }, [serverRemainingSec]);
 
+  // Tick down locally every second for smooth countdown
+  useEffect(() => {
     const id = setInterval(() => {
-      setRemainingSec(getRemainingSeconds(startedAt, totalDurationSeconds));
-    }, 1_000);
-
+      const elapsedSinceUpdate = (Date.now() - lastServerUpdateRef.current) / 1000;
+      const interpolated = Math.max(0, lastServerSecRef.current - elapsedSinceUpdate);
+      setDisplaySec(interpolated);
+    }, 1000);
     return () => clearInterval(id);
-  }, [startedAt, totalDurationSeconds]);
+  }, []);
 
-  const fraction = totalDurationSeconds > 0 ? remainingSec / totalDurationSeconds : 0;
+  const fraction = totalTicks > 0 ? displaySec / (totalTicks * tickIntervalSec) : 0;
   const { text, ring } = getColour(fraction);
   const isUrgent = fraction <= 0.25;
 
@@ -77,7 +78,7 @@ export function GameTimer({
       />
       <Timer size={13} className={`shrink-0 ${text}`} />
       <span className={`text-xs font-bold tabular-nums ${text}`}>
-        {formatTime(remainingSec)}
+        {formatTime(displaySec)}
       </span>
     </div>
   );

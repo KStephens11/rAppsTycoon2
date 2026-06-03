@@ -103,8 +103,8 @@ function GamePageInner() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [popoverAnchor, setPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const [rapps, setRapps] = useState<RappTemplate[]>([]);
-  const [gameStartedAt, setGameStartedAt] = useState<string | null>(null);
-  const [gameTotalSeconds, setGameTotalSeconds] = useState<number>(300);
+  const [currentTick, setCurrentTick] = useState(0);
+  const [totalTicks, setTotalTicks] = useState(60);
 
   const [tuneModalOpen, setTuneModalOpen] = useState(false);
   const [tuneTarget, setTuneTarget] = useState<{
@@ -192,16 +192,16 @@ function GamePageInner() {
   // the timer counts down from the real game-start time, not from zero.
   useEffect(() => {
     if (!sessionCode || !token || gameState !== 'active') return;
-    apiGet<{ startedAt: string | null; totalTicks?: number }>(
+    apiGet<{ startedAt: string | null; totalTicks?: number; currentTick?: number }>(
       `/api/sessions/${sessionCode}`,
       token,
     )
       .then((data) => {
-        if (data.startedAt) {
-          setGameStartedAt(data.startedAt);
+        if (data.currentTick != null) {
+          setCurrentTick(data.currentTick);
         }
         if (data.totalTicks) {
-          setGameTotalSeconds(data.totalTicks * 5); // 5 s per tick
+          setTotalTicks(data.totalTicks);
         }
       })
       .catch((err) => {
@@ -217,13 +217,22 @@ function GamePageInner() {
   }, [wsConnected, fetchBasestations]);
 
   // Periodic basestations poll — safety net for missed WebSocket events
+  // Also refreshes the game tick for the timer
   useEffect(() => {
-    if (gameState !== 'active') return;
+    if (gameState !== 'active' || !sessionCode || !token) return;
     const interval = setInterval(() => {
       fetchBasestations();
-    }, 10000); // every 10 seconds
+      // Refresh tick from session endpoint
+      apiGet<{ currentTick?: number; totalTicks?: number }>(
+        `/api/sessions/${sessionCode}`,
+        token,
+      ).then((data) => {
+        if (data.currentTick != null) setCurrentTick(data.currentTick);
+        if (data.totalTicks) setTotalTicks(data.totalTicks);
+      }).catch(() => {});
+    }, 5000); // every 5 seconds to match tick interval
     return () => clearInterval(interval);
-  }, [gameState, fetchBasestations]);
+  }, [gameState, sessionCode, token, fetchBasestations]);
 
   const fetchCatalogue = useCallback(() => {
     if (!token) return;
@@ -399,10 +408,10 @@ function GamePageInner() {
         <div className="flex-1" />
 
         {/* Game timer */}
-        {gameState === 'active' && gameStartedAt && (
+        {gameState === 'active' && (
           <GameTimer
-            startedAt={gameStartedAt}
-            totalDurationSeconds={gameTotalSeconds}
+            currentTick={currentTick}
+            totalTicks={totalTicks}
           />
         )}
 

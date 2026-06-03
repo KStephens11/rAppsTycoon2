@@ -141,7 +141,15 @@ export function WaitingRoom() {
 
       {/* Leave Lobby */}
       <button
-        onClick={() => { reset(); navigate('/'); }}
+        onClick={async () => {
+          if (sessionCode && token) {
+            try {
+              await apiPost(`/api/sessions/${sessionCode}/leave`, {}, token);
+            } catch { /* ignore — reset anyway */ }
+          }
+          reset();
+          navigate('/');
+        }}
         className="flex items-center gap-2 text-sm text-text-muted hover:text-danger transition-colors mt-2 cursor-pointer"
       >
         <LogOut size={14} />
