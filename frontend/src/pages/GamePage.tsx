@@ -1,26 +1,27 @@
 import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
 import { Radio, User, AlertTriangle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { useWebSocket } from '../hooks/useWebSocket';
-import { useGameState, type GameEvent } from '../hooks/useGameState';
-import { useGameSubscriptions } from '../hooks/useGameSubscriptions';
-import { useSoundEffects } from '../hooks/useSoundEffects';
+import { useWebSocket } from '../hooks';
+import { useGameState, type GameEvent } from '../hooks';
+import { useGameSubscriptions } from '../hooks';
+import { useSoundEffects } from '../hooks';
 import { RappCatalogue, type RappTemplate } from '../components/game/RappCatalogue';
 import { CatalogueStrip } from '../components/game/CatalogueStrip';
 import { TuneModal } from '../components/game/TuneModal';
-import { ToastContainer, type ToastMessage } from '../components/ui/Toast';
+import { ToastContainer, type ToastMessage } from '../components/ui';
 import { EventAlertContainer, useEventAlerts } from '../components/game/EventAlert';
 import { EventPanel, type ActiveEvent } from '../components/game/EventPanel';
 import { Leaderboard } from '../components/game/Leaderboard';
 import { GameTimer } from '../components/game/GameTimer';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
-import { BottomSheet } from '../components/ui/BottomSheet';
+import { BottomSheet } from '../components/ui';
 import { ExpandableSection } from '../components/ui/ExpandableSection';
 import { apiGet, apiPost, apiPut } from '../services/api';
-import { BasestationsSkeleton, LeaderboardSkeleton } from '../components/ui/Skeleton';
+import { BasestationsSkeleton, LeaderboardSkeleton } from '../components/ui';
 import { DragProvider, useDrag } from '../context/DragContext';
 import { DragPreview } from '../components/game/DragPreview';
 import { BasestationPopover } from '../components/game/BasestationPopover';
+import { Confetti } from '../components/Confetti';
 
 const IsometricMap = lazy(() => import('../components/game/IsometricMap'));
 
@@ -117,6 +118,8 @@ function GamePageInner() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const [resolvedBasestationIds, setResolvedBasestationIds] = useState<Set<number>>(new Set());
+  const [showResolutionCelebration, setShowResolutionCelebration] = useState(false);
+  const postActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousEventIdsRef = useRef<Map<number, Set<number>>>(new Map());
 
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'success') => {
@@ -145,7 +148,10 @@ function GamePageInner() {
     if (gameState === 'active') {
       ws.connect();
     }
-    return () => { ws.disconnect(); };
+    return () => {
+      ws.disconnect();
+      if (postActionTimerRef.current) clearTimeout(postActionTimerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);
 
@@ -176,6 +182,9 @@ function GamePageInner() {
         if (newResolvedBsIds.length > 0) {
           setResolvedBasestationIds(new Set(newResolvedBsIds));
           setTimeout(() => setResolvedBasestationIds(new Set()), 2000);
+          // Trigger celebration burst for any event resolution
+          setShowResolutionCelebration(true);
+          setTimeout(() => setShowResolutionCelebration(false), 2200);
         }
         setBasestations(data.basestations);
         setBasestationsLoading(false);
@@ -185,6 +194,14 @@ function GamePageInner() {
         setBasestationsLoading(false);
       });
   }, [sessionCode, token]);
+
+  // After a player action, fetch immediately then again after 6 s (≥ one tick interval)
+  // so the resolution detection fires as soon as the tick engine processes the change.
+  const fetchBasestationsAfterAction = useCallback(() => {
+    fetchBasestations();
+    if (postActionTimerRef.current) clearTimeout(postActionTimerRef.current);
+    postActionTimerRef.current = setTimeout(fetchBasestations, 6000);
+  }, [fetchBasestations]);
 
   useEffect(() => { fetchBasestations(); }, [fetchBasestations]);
 
@@ -261,8 +278,8 @@ function GamePageInner() {
     await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
     addToast('rApp deployed successfully!', 'success');
     playDeploy();
-    fetchBasestations();
-  }, [sessionCode, token, addToast, fetchBasestations, playDeploy]);
+    fetchBasestationsAfterAction();
+  }, [sessionCode, token, addToast, fetchBasestationsAfterAction, playDeploy]);
 
   const handleDrop = useCallback(async (basestationId: number) => {
     if (!dragState || !sessionCode || !token || isDeploying) return;
@@ -272,7 +289,7 @@ function GamePageInner() {
       await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
       addToast('rApp deployed successfully!', 'success');
       playDeploy();
-      fetchBasestations();
+      fetchBasestationsAfterAction();
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : 'Failed to deploy rApp', 'error');
     } finally {
@@ -290,30 +307,30 @@ function GamePageInner() {
     if (!sessionCode || !token) return;
     await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/tune`, { threshold, aggressiveness }, token);
     addToast('rApp tuned successfully!', 'success');
-    fetchBasestations();
-  }, [sessionCode, token, addToast, fetchBasestations]);
+    fetchBasestationsAfterAction();
+  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
 
   const handleDisable = useCallback(async (rappId: number) => {
     if (!sessionCode || !token) return;
     try {
       await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, undefined, token);
       addToast('rApp disabled', 'info');
-      fetchBasestations();
+      fetchBasestationsAfterAction();
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : 'Failed to disable rApp', 'error');
     }
-  }, [sessionCode, token, addToast, fetchBasestations]);
+  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
 
   const handleRollback = useCallback(async (rappId: number) => {
     if (!sessionCode || !token) return;
     try {
       await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, undefined, token);
       addToast('rApp rolled back to previous version', 'success');
-      fetchBasestations();
+      fetchBasestationsAfterAction();
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : 'Failed to rollback rApp', 'error');
     }
-  }, [sessionCode, token, addToast, fetchBasestations]);
+  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
 
   const mergedBasestations = useMemo(() => basestations.map((bs) => {
     const rtState = realTimeState.basestations.find((rt) => rt.id === bs.id);
@@ -387,6 +404,7 @@ function GamePageInner() {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <EventAlertContainer alerts={eventAlerts} onDismiss={dismissEventAlert} />
       <DragPreview />
+
 
       {/* ── Header bar ── */}
       <header className="hidden md:flex h-12 items-center px-4 gap-4 bg-surface border-b border-surface-lighter shrink-0 z-20">
@@ -494,7 +512,11 @@ function GamePageInner() {
 
       {/* ── Bottom bar — Live Incident Feed (full width) ── */}
       <div className="hidden md:flex h-52 border-t border-surface-lighter shrink-0 bg-surface">
-        <div className="flex flex-col w-full overflow-hidden">
+        <div className="relative flex flex-col w-full overflow-hidden">
+          {/* Confetti burst contained to this box when an event is resolved */}
+          {showResolutionCelebration && (
+            <Confetti duration={2000} particleCount={80} contained />
+          )}
           <div className="px-4 py-2 border-b border-surface-lighter flex items-center gap-2 shrink-0">
             <AlertTriangle size={11} className={combinedActiveEvents.length > 0 ? 'text-warning' : 'text-text-muted'} />
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
