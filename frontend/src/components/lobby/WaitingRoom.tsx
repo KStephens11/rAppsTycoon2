@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Crown, Users, Play, LogOut, Bot, Plus } from 'lucide-react';
-import { Button } from '../ui';
+import { Button, MascotByte } from '../ui';
 import { useGame, type Player } from '../../context/GameContext';
 import { apiGet, apiPost, ApiError } from '../../services/api';
 
@@ -92,14 +92,43 @@ export function WaitingRoom() {
     }
   };
 
+  // Derive mood and speech based on lobby state
+  const canStart = isHost && players.length >= 2;
+  const mascotMood = canStart ? 'excited' : 'happy';
+  const mascotSpeech = isHost
+    ? canStart
+      ? "Ready — hit Start whenever you like!"
+      : "Invite friends or add bots to play!"
+    : "Waiting for the host to start...";
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col items-center gap-6 w-full max-w-md mx-auto"
+      className="flex flex-row items-start gap-6 w-full"
     >
+      {/* ── Mascot sidebar ── */}
+      <div className="shrink-0 w-36 flex flex-col items-center gap-3 pt-6">
+        <MascotByte mood={mascotMood} size={84} />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mascotSpeech}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.25 }}
+            className="rounded-xl border border-surface-lighter bg-surface-light px-2.5 py-2 text-center w-full"
+          >
+            <p className="text-[11px] text-text-muted leading-relaxed">{mascotSpeech}</p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* ── Main content ── */}
+      <div className="flex flex-col items-center gap-6 flex-1 min-w-0">
+
       {/* Session Code */}
       <div className="text-center">
         <p className="text-text-muted text-sm mb-2">Session Code</p>
@@ -251,6 +280,8 @@ export function WaitingRoom() {
         <LogOut size={14} />
         Leave Lobby
       </button>
+
+      </div>{/* end main content */}
     </motion.div>
   );
 }

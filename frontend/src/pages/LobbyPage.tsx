@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui';
 import { Button } from '../components/ui';
+import { MascotByte } from '../components/ui';
 import { ToastContainer, type ToastMessage } from '../components/ui';
 import { WaitingRoom } from '../components/lobby/WaitingRoom';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
@@ -77,12 +78,15 @@ export function LobbyPage() {
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center gap-8 w-full max-w-3xl"
           >
-            {/* Title */}
-            <div className="text-center">
-              <h1 className="text-5xl font-bold text-primary drop-shadow-[0_0_20px_rgba(6,182,212,0.4)] mb-2">
-                rApp Tycoon
-              </h1>
-              <p className="text-text-muted">Deploy. Optimise. Dominate the network.</p>
+            {/* Title + mascot */}
+            <div className="flex items-center gap-5">
+              <MascotByte mood="waving" size={80} />
+              <div>
+                <h1 className="text-5xl font-bold text-primary drop-shadow-[0_0_20px_rgba(6,182,212,0.4)] mb-2">
+                  rApp Tycoon
+                </h1>
+                <p className="text-text-muted">Deploy. Optimise. Dominate the network.</p>
+              </div>
             </div>
 
             {/* Cards */}
@@ -109,7 +113,7 @@ export function LobbyPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="w-full max-w-md"
+            className="w-full max-w-2xl"
           >
             <WaitingRoom />
           </motion.div>
