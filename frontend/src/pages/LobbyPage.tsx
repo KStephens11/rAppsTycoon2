@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { ToastContainer, type ToastMessage } from '../components/ui/Toast';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '../components/ui';
+import { Button } from '../components/ui';
+import { MascotByte } from '../components/ui';
+import { ToastContainer, type ToastMessage } from '../components/ui';
 import { WaitingRoom } from '../components/lobby/WaitingRoom';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
 import { useGame } from '../context/GameContext';
@@ -44,6 +46,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function LobbyPage() {
   const { gameState } = useGame();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const navigate = useNavigate();
 
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
     const id = crypto.randomUUID();
@@ -57,7 +60,7 @@ export function LobbyPage() {
   const inWaitingRoom = gameState === 'lobby';
 
   return (
-    <div className="relative flex h-full items-center justify-center p-4 bg-gradient-to-br from-surface via-surface to-surface-light">
+    <div className="relative flex h-full items-center justify-center p-4 bg-linear-to-br from-surface via-surface to-surface-light">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* Settings toolbar (sound + theme toggles) */}
@@ -75,12 +78,15 @@ export function LobbyPage() {
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center gap-8 w-full max-w-3xl"
           >
-            {/* Title */}
-            <div className="text-center">
-              <h1 className="text-5xl font-bold text-primary drop-shadow-[0_0_20px_rgba(6,182,212,0.4)] mb-2">
-                rApp Tycoon
-              </h1>
-              <p className="text-text-muted">Deploy. Optimise. Dominate the network.</p>
+            {/* Title + mascot */}
+            <div className="flex items-center gap-5">
+              <MascotByte mood="waving" size={80} />
+              <div>
+                <h1 className="text-5xl font-bold text-primary drop-shadow-[0_0_20px_rgba(6,182,212,0.4)] mb-2">
+                  rApp Tycoon
+                </h1>
+                <p className="text-text-muted">Deploy. Optimise. Dominate the network.</p>
+              </div>
             </div>
 
             {/* Cards */}
@@ -88,6 +94,17 @@ export function LobbyPage() {
               <CreateGameCard onError={addToast} />
               <JoinGameCard onError={addToast} />
             </div>
+
+            {/* Tutorial button */}
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => navigate('/tutorial')}
+              className="flex items-center gap-2 text-text-muted hover:text-primary"
+            >
+              <span className="text-lg">🎓</span>
+              New to the game? Take the tutorial
+            </Button>
           </motion.div>
         ) : (
           <motion.div
@@ -96,7 +113,7 @@ export function LobbyPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="w-full max-w-md"
+            className="w-full max-w-2xl"
           >
             <WaitingRoom />
           </motion.div>

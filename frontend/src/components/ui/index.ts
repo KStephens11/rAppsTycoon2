@@ -1,4 +1,6 @@
 export { Button } from './Button';
+export { MascotByte } from './MascotByte';
+export type { MascotMood } from './MascotByte';
 export { Card } from './Card';
 export { Badge } from './Badge';
 export { ProgressBar } from './ProgressBar';

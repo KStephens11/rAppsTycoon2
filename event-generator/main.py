@@ -60,36 +60,66 @@ def tick_job():
                 config.events_player_multiplier
             )
             
-            # Generate and push events
+            # Generate and push events — same event goes to all players (fairness)
             for _ in range(event_count):
                 if not basestation_ids:
                     logger.warning(f"Session {session_code} has no basestations")
                     continue
                 
-                # Randomly select a basestation
-                import random
-                basestation_id = random.choice(basestation_ids)
-                basestation_name = f"BS-{basestation_id}"
+                # Get per-player basestation groups (list of lists)
+                bs_by_player = session.get('basestationIdsByPlayer', [])
                 
-                # Generate event
-                event = generate_event(
-                    basestation_id,
-                    basestation_name,
-                    tick_number,
-                    config.tick_total
-                )
-                
-                # Push to backend
-                try:
-                    client.push_event(session_code, event)
-                    events_pushed += 1
-                    logger.debug(
-                        f"Pushed {event['eventType']} ({event['severity']}) "
-                        f"to {session_code}/{basestation_name}"
+                if not bs_by_player or not bs_by_player[0]:
+                    # Fallback: old behavior if grouping not available
+                    import random
+                    basestation_id = random.choice(basestation_ids)
+                    
+                    event = generate_event(
+                        basestation_id,
+                        f"BS-{basestation_id}",
+                        tick_number,
+                        config.tick_total
                     )
-                except BackendClientError as e:
-                    logger.warning(f"Failed to push event to {session_code}: {e}")
-                    errors += 1
+                    
+                    try:
+                        client.push_event(session_code, event)
+                        events_pushed += 1
+                    except BackendClientError as e:
+                        logger.warning(f"Failed to push event to {session_code}: {e}")
+                        errors += 1
+                else:
+                    # Fair mode: pick the same basestation index for each player
+                    import random
+                    bs_count_per_player = len(bs_by_player[0])
+                    bs_index = random.randint(0, bs_count_per_player - 1)
+                    
+                    # Generate one event template
+                    first_bs_id = bs_by_player[0][bs_index]
+                    event_template = generate_event(
+                        first_bs_id,
+                        f"BS-{first_bs_id}",
+                        tick_number,
+                        config.tick_total
+                    )
+                    
+                    # Push the same event type/severity to the equivalent basestation of each player
+                    for player_bs_list in bs_by_player:
+                        if bs_index < len(player_bs_list):
+                            target_bs_id = player_bs_list[bs_index]
+                            event_copy = {
+                                **event_template,
+                                'basestationId': target_bs_id,
+                            }
+                            try:
+                                client.push_event(session_code, event_copy)
+                                events_pushed += 1
+                                logger.debug(
+                                    f"Pushed {event_copy['eventType']} ({event_copy['severity']}) "
+                                    f"to {session_code}/BS-{target_bs_id}"
+                                )
+                            except BackendClientError as e:
+                                logger.warning(f"Failed to push event to {session_code}: {e}")
+                                errors += 1
             
             # Increment tick counter
             session_tick_counters[session_code] += 1

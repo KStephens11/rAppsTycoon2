@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Zap,
   Maximize,
@@ -14,10 +15,10 @@ import {
 import { useGame } from '../../context/GameContext';
 import { useDrag } from '../../context/DragContext';
 import { apiGet } from '../../services/api';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
-import { CatalogueSkeleton } from '../ui/Skeleton';
-import { Tooltip } from '../ui/Tooltip';
+import { Badge } from '../ui';
+import { Button } from '../ui';
+import { CatalogueSkeleton } from '../ui';
+import { Tooltip } from '../ui';
 import { DeploymentPicker } from './DeploymentPicker';
 
 export interface RappTemplate {
@@ -95,7 +96,7 @@ const rappHelpfulWhen: Record<string, string[]> = {
   ],
 };
 
-function RappTooltipContent({ rapp }: { rapp: RappTemplate }) {
+export function RappTooltipContent({ rapp }: { rapp: RappTemplate }) {
   const situations = rappHelpfulWhen[rapp.name] ?? [];
   return (
     <div className="p-3 space-y-2.5">
@@ -144,6 +145,64 @@ function RiskIndicator({ value, label }: { value: number; label: string }) {
   );
 }
 
+/** Portaled dropdown for selecting a basestation to deploy to */
+function RappPickerDropdown({ rapp, basestations, onConfirmDeploy, onClose, anchorEl }: {
+  rapp: RappTemplate;
+  basestations: Array<{ id: number; name: string }>;
+  onConfirmDeploy: (templateId: number, basestationId: number) => void;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+
+  // Position above the anchor element
+  useEffect(() => {
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setPos({
+        left: rect.left + rect.width / 2,
+        top: rect.top,
+      });
+    }
+  }, [anchorEl]);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    const timer = setTimeout(() => document.addEventListener('mousedown', handleClick), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handleClick); };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-[9999] w-48 rounded-lg bg-surface border border-surface-lighter shadow-2xl p-2 space-y-0.5"
+      style={{ left: pos.left, bottom: window.innerHeight - pos.top + 8, transform: 'translateX(-50%)' }}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted px-2 py-1">
+        Deploy {rapp.name} to:
+      </p>
+      {basestations.map((bs) => (
+        <button
+          key={bs.id}
+          onClick={() => {
+            onConfirmDeploy(rapp.id, bs.id);
+            onClose();
+          }}
+          className="w-full text-left px-2 py-1.5 text-xs text-text rounded hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+        >
+          {bs.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 interface RappCatalogueProps {
   onDeploy?: (rapp: RappTemplate) => void;
   basestations?: Array<{ id: number; name: string }>;
@@ -177,6 +236,13 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
     fetchCatalogue();
   }, [fetchCatalogue]);
 
+  // Close picker when a drag starts
+  useEffect(() => {
+    if (dragState) {
+      setPickerOpenForId(null);
+    }
+  }, [dragState]);
+
   const handleDragStart = useCallback(
     (e: React.DragEvent<HTMLDivElement>, rapp: RappTemplate) => {
       e.dataTransfer.setData('text/plain', String(rapp.id));
@@ -186,6 +252,8 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
       emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
       e.dataTransfer.setDragImage(emptyImg, 0, 0);
       startDrag({ templateId: rapp.id, name: rapp.name, icon: rapp.name });
+      // Close picker when dragging starts
+      setPickerOpenForId(null);
     },
     [startDrag]
   );
@@ -210,73 +278,78 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
   }
 
   return (
-    <div className="space-y-2">
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
-        rApp Catalogue
-      </h4>
+    <div className="flex gap-3 pb-1">
       {rapps.map((rapp) => {
         const Icon = getRappIcon(rapp.name);
         const isDragging = dragState?.templateId === rapp.id;
+        const isExpanded = pickerOpenForId === rapp.id;
         return (
-          <Tooltip
-            key={rapp.id}
-            content={<RappTooltipContent rapp={rapp} />}
-            side="right"
-            className="block"
-          >
-            <div
-              draggable
-              tabIndex={0}
-              role="button"
-              aria-label={`Deploy ${rapp.name} - €${rapp.cost}`}
-              onDragStart={(e) => handleDragStart(e, rapp)}
-              onDragEnd={handleDragEnd}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
+          <div key={rapp.id} className="flex-1 min-w-0 relative">
+            <Tooltip
+              content={<RappTooltipContent rapp={rapp} />}
+              side="top"
+              className="block"
+              disabled={!!dragState}
+            >
+              <div
+                draggable
+                tabIndex={0}
+                role="button"
+                data-rapp-id={rapp.id}
+                aria-label={`Deploy ${rapp.name} - €${rapp.cost}`}
+                onDragStart={(e) => handleDragStart(e, rapp)}
+                onDragEnd={handleDragEnd}
+                onClick={() => {
                   if (basestationsProp && onConfirmDeploy) {
-                    setPickerOpenForId(rapp.id);
+                    setPickerOpenForId(isExpanded ? null : rapp.id);
                   } else {
                     onDeploy?.(rapp);
                   }
-                }
-              }}
-              className={`relative p-3 rounded-lg bg-surface-light border border-surface-lighter hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-grab ${isDragging ? 'opacity-50' : ''}`}
-            >
-              <div className="flex items-start gap-2.5">
-                <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                  <Icon size={16} className="text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-semibold text-text truncate">
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (basestationsProp && onConfirmDeploy) {
+                      setPickerOpenForId(isExpanded ? null : rapp.id);
+                    } else {
+                      onDeploy?.(rapp);
+                    }
+                  }
+                }}
+                className={`relative p-3 rounded-lg bg-surface-light border border-surface-lighter hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-grab ${isDragging ? 'opacity-50' : ''} ${isExpanded ? 'border-primary/50 ring-1 ring-primary/30' : ''}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="shrink-0 w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Icon size={14} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-semibold text-text truncate block">
                       {rapp.name}
                     </span>
-                    <Badge variant="warning">€{rapp.cost}</Badge>
                   </div>
-                  <p className="text-xs text-text-muted line-clamp-1 mb-1.5">
-                    {rapp.benefit}
-                  </p>
-                  <div className="flex items-center gap-3">
+                </div>
+                <div className="flex items-center justify-between">
+                  <Badge variant="warning">€{rapp.cost}</Badge>
+                  <div className="flex items-center gap-2">
                     <RiskIndicator value={rapp.risk} label="Risk" />
-                    <RiskIndicator value={100 - rapp.confidence} label="Conf" />
                   </div>
                 </div>
               </div>
-              {pickerOpenForId === rapp.id && basestationsProp && onConfirmDeploy && (
-                <DeploymentPicker
-                  templateId={rapp.id}
-                  templateName={rapp.name}
+            </Tooltip>
+            {/* Expanded basestation picker — portaled to body to avoid clipping */}
+            {isExpanded && basestationsProp && onConfirmDeploy &&
+              createPortal(
+                <RappPickerDropdown
+                  rapp={rapp}
                   basestations={basestationsProp}
-                  onSelect={(basestationId) => {
-                    onConfirmDeploy(rapp.id, basestationId);
-                    setPickerOpenForId(null);
-                  }}
+                  onConfirmDeploy={onConfirmDeploy}
                   onClose={() => setPickerOpenForId(null)}
-                />
-              )}
-            </div>
-          </Tooltip>
+                  anchorEl={document.querySelector(`[data-rapp-id="${rapp.id}"]`)}
+                />,
+                document.body,
+              )
+            }
+          </div>
         );
       })}
     </div>

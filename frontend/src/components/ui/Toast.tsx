@@ -16,7 +16,7 @@ interface ToastProps {
 export function ToastContainer({ toasts, onDismiss }: ToastProps) {
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"
+      className="flex flex-col gap-2 max-w-sm"
       aria-live="polite"
       aria-atomic="false"
       role="status"
@@ -36,33 +36,22 @@ function Toast({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: stri
     return () => clearTimeout(timer);
   }, [toast.id, onDismiss]);
 
-  const bgColor =
-    toast.type === 'error'
-      ? 'bg-danger/10 border-danger/30'
-      : toast.type === 'success'
-        ? 'bg-accent/10 border-accent/30'
-        : 'bg-primary/10 border-primary/30';
-
-  const textColor =
-    toast.type === 'error'
-      ? 'text-danger'
-      : toast.type === 'success'
-        ? 'text-accent'
-        : 'text-primary';
+  const bgColor = 'bg-surface-light border-surface-lighter';
+  const textColor = 'text-white';
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 50, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
-      className={`flex items-start gap-3 rounded-lg border p-3 backdrop-blur-sm ${bgColor}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`flex items-start gap-3 rounded-lg border p-3 ${bgColor}`}
     >
       <AlertCircle size={18} className={`mt-0.5 shrink-0 ${textColor}`} />
-      <p className="text-sm text-text flex-1">{toast.message}</p>
+      <p className="text-sm text-white flex-1">{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="shrink-0 text-text-muted hover:text-text transition-colors cursor-pointer"
+        className="shrink-0 text-white hover:text-white/70 transition-colors cursor-pointer"
         aria-label="Dismiss notification"
       >
         <X size={14} />
