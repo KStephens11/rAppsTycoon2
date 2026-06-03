@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: rapp-config
 data:
-  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rapptycoon
   SPRING_PROFILES_ACTIVE: prod
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rapptycoon
   BACKEND_BASE_URL: http://backend:8080

@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('sonar-token1')
         DOCKER_HOST = 'tcp://localhost:2375'
         IMAGE_BACKEND = "rapp-backend:${BUILD_NUMBER}"
         IMAGE_EVENT_GENERATOR = "rapp-event-generator:${BUILD_NUMBER}"
@@ -19,17 +18,47 @@ pipeline {
         stage('Test') {
             steps {
                 dir('backend') {
-                    sh './mvnw -B test -DskipITs'
+                    sh './mvnw -B test jacoco:report -DskipITs'
                 }
             }
             post {
                 always {
                     junit 'backend/target/surefire-reports/*.xml'
+
                     jacoco(
                         execPattern: '**/target/jacoco.exec',
                         classPattern: '**/target/classes',
                         sourcePattern: '**/src/main/java'
                     )
+
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'backend/target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Code Coverage'
+                    ])
+                }
+            }
+        }
+
+        stage('Karate Tests') {
+            steps {
+                dir('backend') {
+                    sh './mvnw -B test -Dtest=*KarateTest'
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'backend/target/karate-reports',
+                        reportFiles: 'karate-summary.html',
+                        reportName: 'Karate Summary'
+                    ])
                 }
             }
         }
@@ -37,14 +66,14 @@ pipeline {
         stage('SonarQube') {
             steps {
                 dir('backend') {
-                    sh """
-                        ./mvnw -B test org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                        -DskipITs \
-                        -Dsonar.projectKey=yuhangzzzz_rapp-tycoon-backend \
-                        -Dsonar.organization=yuhangzzzz \
-                        -Dsonar.host.url=https://sonarcloud.io \
-                        -Dsonar.token=${SONAR_TOKEN}
-                    """
+                    withSonarQubeEnv('SonarCloud') {
+                        sh """
+                            ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                            -DskipITs \
+                            -Dsonar.projectKey=yuhangzzzz_rapp-tycoon-backend \
+                            -Dsonar.organization=yuhangzzzz
+                        """
+                    }
                 }
             }
         }
