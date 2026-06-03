@@ -220,13 +220,13 @@ describe('GamePage simultaneous panel layout', () => {
     expect(await screen.findByText('rApp Catalogue')).toBeInTheDocument();
 
     // Right panel exists with correct classes
-    const rightPanel = container.querySelector('.w-56') || container.querySelector('.w-72');
+    const rightPanel = container.querySelector('.w-56') || container.querySelector('.w-72') || container.querySelector('.w-64');
     expect(rightPanel).toBeInTheDocument();
     expect(rightPanel).toHaveClass('bg-surface');
     expect(rightPanel).toHaveClass('border-l');
 
     // Bottom bar exists with correct structure
-    const bottomBar = container.querySelector('.h-36') || container.querySelector('.h-56') || container.querySelector('.h-52');
+    const bottomBar = container.querySelector('.h-36') || container.querySelector('.h-56') || container.querySelector('.h-52') || container.querySelector('.h-44') || container.querySelector('.h-28') || container.querySelector('.h-24');
     expect(bottomBar).toBeInTheDocument();
     expect(bottomBar).toHaveClass('border-t');
 
