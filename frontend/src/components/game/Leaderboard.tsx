@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { Crown } from 'lucide-react';
+import { Crown, DollarSign, Users, Signal } from 'lucide-react';
 import type { LeaderboardEntry } from '../../hooks/useGameState';
 
 interface LeaderboardProps {
@@ -34,22 +34,25 @@ function AnimatedScore({ value, className }: { value: number; className?: string
   return <span ref={ref} className={className}>{value.toFixed(1)}</span>;
 }
 
-/** Mini breakdown dots showing money/satisfaction/stability as coloured bars */
+/** Mini breakdown with icons showing money/satisfaction/stability */
 function ScoreBreakdown({ scores }: { scores: LeaderboardEntry['scores'] }) {
   const items = [
-    { value: scores.money, color: 'bg-emerald-400', label: 'Money' },
-    { value: scores.customerSatisfaction, color: 'bg-cyan-400', label: 'Satisfaction' },
-    { value: scores.networkStability, color: 'bg-purple-400', label: 'Stability' },
+    { value: scores.money, color: 'text-emerald-400', label: 'Money', icon: DollarSign },
+    { value: scores.customerSatisfaction, color: 'text-cyan-400', label: 'Satisfaction', icon: Users },
+    { value: scores.networkStability, color: 'text-purple-400', label: 'Stability', icon: Signal },
   ];
 
   return (
-    <div className="flex items-center gap-1.5 mt-1">
-      {items.map((item) => (
-        <div key={item.label} className="flex items-center gap-0.5" title={`${item.label}: ${item.value.toFixed(0)}%`}>
-          <div className={`w-2 h-2 rounded-full ${item.color}`} />
-          <span className="text-[10px] text-text-muted">{item.value.toFixed(0)}</span>
-        </div>
-      ))}
+    <div className="flex items-center gap-2 mt-1">
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div key={item.label} className="flex items-center gap-0.5" title={`${item.label}: ${item.value.toFixed(0)}%`}>
+            <Icon size={11} className={item.color} strokeWidth={2.5} />
+            <span className="text-[10px] text-text-muted">{item.value.toFixed(0)}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
