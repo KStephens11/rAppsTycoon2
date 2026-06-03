@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { ToastContainer, type ToastMessage } from '../components/ui/Toast';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '../components/ui';
+import { Button } from '../components/ui';
+import { ToastContainer, type ToastMessage } from '../components/ui';
 import { WaitingRoom } from '../components/lobby/WaitingRoom';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
 import { useGame } from '../context/GameContext';
@@ -44,6 +45,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function LobbyPage() {
   const { gameState } = useGame();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const navigate = useNavigate();
 
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
     const id = crypto.randomUUID();
@@ -57,7 +59,7 @@ export function LobbyPage() {
   const inWaitingRoom = gameState === 'lobby';
 
   return (
-    <div className="relative flex h-full items-center justify-center p-4 bg-gradient-to-br from-surface via-surface to-surface-light">
+    <div className="relative flex h-full items-center justify-center p-4 bg-linear-to-br from-surface via-surface to-surface-light">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* Settings toolbar (sound + theme toggles) */}
@@ -88,6 +90,17 @@ export function LobbyPage() {
               <CreateGameCard onError={addToast} />
               <JoinGameCard onError={addToast} />
             </div>
+
+            {/* Tutorial button */}
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => navigate('/tutorial')}
+              className="flex items-center gap-2 text-text-muted hover:text-primary"
+            >
+              <span className="text-lg">🎓</span>
+              New to the game? Take the tutorial
+            </Button>
           </motion.div>
         ) : (
           <motion.div

@@ -1,0 +1,623 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Zap,
+  Maximize,
+  Shield,
+  FileCheck,
+  Settings,
+  GitBranch,
+  BellOff,
+  AlertTriangle,
+  Trophy,
+  Sliders,
+  Power,
+  RotateCcw,
+  Wifi,
+  Activity,
+  DollarSign,
+  Users,
+} from 'lucide-react';
+
+type MascotMood = 'happy' | 'excited' | 'thinking' | 'waving' | 'celebrating';
+
+// ---------------------------------------------------------------------------
+// Mascot
+// ---------------------------------------------------------------------------
+function MascotByte({ mood = 'happy' }: { mood?: MascotMood }) {
+  const isExcited = mood === 'excited' || mood === 'celebrating';
+  const isThinking = mood === 'thinking';
+  const isWaving = mood === 'waving';
+  const isCelebrating = mood === 'celebrating';
+
+  return (
+    <motion.div
+      className="flex flex-col items-center select-none shrink-0"
+      animate={{ y: [0, -5, 0] }}
+      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      <svg viewBox="0 0 100 118" width="88" height="104" aria-hidden="true">
+        {/* Antenna */}
+        <line x1="50" y1="7" x2="50" y2="24" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="50" cy="5" r="4" fill="#06b6d4" />
+        <motion.circle cx="50" cy="5" r="8" fill="none" stroke="#06b6d4" strokeWidth="1.5"
+          animate={{ r: [8, 14], opacity: [0.7, 0] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }} />
+        <motion.circle cx="50" cy="5" r="13" fill="none" stroke="#06b6d4" strokeWidth="1"
+          animate={{ r: [13, 20], opacity: [0.3, 0] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', delay: 0.35 }} />
+
+        {/* Head */}
+        <rect x="15" y="22" width="70" height="56" rx="17" fill="#1e293b" stroke="#06b6d4" strokeWidth="2" />
+
+        {/* Eyes */}
+        {isThinking ? (
+          <>
+            <path d="M 27 44 Q 36 39 45 44" stroke="#06b6d4" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+            <circle cx="65" cy="42" r="7.5" fill="#0f172a" />
+            <circle cx="65" cy="42" r="5" fill="#06b6d4" />
+            <circle cx="67" cy="40" r="1.5" fill="white" />
+          </>
+        ) : isExcited ? (
+          <>
+            <circle cx="36" cy="42" r="9.5" fill="#0f172a" />
+            <circle cx="36" cy="42" r="6.5" fill="#06b6d4" />
+            <circle cx="38.5" cy="39.5" r="2" fill="white" />
+            <circle cx="64" cy="42" r="9.5" fill="#0f172a" />
+            <circle cx="64" cy="42" r="6.5" fill="#06b6d4" />
+            <circle cx="66.5" cy="39.5" r="2" fill="white" />
+          </>
+        ) : (
+          <>
+            <circle cx="36" cy="42" r="7.5" fill="#0f172a" />
+            <circle cx="36" cy="42" r="5" fill="#06b6d4" />
+            <circle cx="38" cy="40" r="1.5" fill="white" />
+            <circle cx="64" cy="42" r="7.5" fill="#0f172a" />
+            <circle cx="64" cy="42" r="5" fill="#06b6d4" />
+            <circle cx="66" cy="40" r="1.5" fill="white" />
+          </>
+        )}
+
+        {/* Mouth */}
+        {isThinking ? (
+          <path d="M 36 60 Q 50 58 64 60" stroke="#64748b" strokeWidth="2" fill="none" strokeLinecap="round" />
+        ) : isExcited ? (
+          <path d="M 31 58 Q 50 74 69 58" stroke="#10b981" strokeWidth="3" fill="none" strokeLinecap="round" />
+        ) : (
+          <path d="M 34 59 Q 50 71 66 59" stroke="#10b981" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        )}
+
+        {/* Cheeks */}
+        <ellipse cx="22" cy="51" rx="5" ry="3.5" fill="#f472b6" opacity="0.22" />
+        <ellipse cx="78" cy="51" rx="5" ry="3.5" fill="#f472b6" opacity="0.22" />
+
+        {/* Body */}
+        <rect x="18" y="80" width="64" height="36" rx="12" fill="#1e293b" stroke="#06b6d4" strokeWidth="1.5" />
+        <rect x="26" y="86" width="48" height="22" rx="5" fill="#0f172a" />
+        {/* Signal on chest */}
+        <circle cx="50" cy="102" r="3" fill={isCelebrating ? '#f59e0b' : '#10b981'} />
+        <path d="M 44 98 Q 50 93 56 98" stroke={isCelebrating ? '#f59e0b' : '#10b981'} strokeWidth="2" fill="none" strokeLinecap="round" />
+        <path d="M 38 94 Q 50 87 62 94" stroke="#06b6d4" strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.6" />
+
+        {/* Left arm */}
+        <rect x="5" y="82" width="13" height="9" rx="4.5" fill="#1e293b" stroke="#06b6d4" strokeWidth="1.5" />
+        {/* Right arm — raised when waving */}
+        {isWaving ? (
+          <rect x="82" y="75" width="13" height="9" rx="4.5" fill="#1e293b" stroke="#06b6d4" strokeWidth="1.5"
+            transform="rotate(-40 88 84)" />
+        ) : (
+          <rect x="82" y="82" width="13" height="9" rx="4.5" fill="#1e293b" stroke="#06b6d4" strokeWidth="1.5" />
+        )}
+      </svg>
+      <span className="text-[10px] font-bold text-primary tracking-widest mt-0.5">BYTE</span>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Step definitions
+// ---------------------------------------------------------------------------
+const STEPS: { title: string; mood: MascotMood; speech: string }[] = [
+  {
+    title: 'Welcome to rApp Tycoon!',
+    mood: 'waving',
+    speech:
+      "Hi there, future network tycoon! I'm Byte, your AI network guide. I'll walk you through everything you need to dominate the 5G network. Let's go!",
+  },
+  {
+    title: 'Your Mission',
+    mood: 'excited',
+    speech:
+      "You're a network operator competing against up to 5 other players. Deploy automation apps, respond to incidents, and score the highest composite score before time runs out!",
+  },
+  {
+    title: 'Your Basestations',
+    mood: 'happy',
+    speech:
+      "You control 3 basestations — the towers that power the network. Each station has 6 key health metrics. Keep them in the green to keep your customers happy and your score high!",
+  },
+  {
+    title: 'The rApp Catalogue',
+    mood: 'excited',
+    speech:
+      "rApps are automation applications that supercharge your stations! Drag them from the catalogue on the left and drop onto a basestation to deploy. Each specialises in something different!",
+  },
+  {
+    title: 'Managing Your rApps',
+    mood: 'thinking',
+    speech:
+      "Once an rApp is running, you can tune its aggressiveness, disable it, or roll it back to a previous version. Keep an eye on your deployed apps — sometimes less is more!",
+  },
+  {
+    title: 'Network Events',
+    mood: 'thinking',
+    speech:
+      "Incidents will strike your basestations at random! Power outages, traffic spikes, hardware failures... They escalate over time if ignored. Deploy the right rApps fast to counter them!",
+  },
+  {
+    title: 'How Scoring Works',
+    mood: 'happy',
+    speech:
+      "Your composite score blends three things: how much money you have left, how happy your customers are, and how stable your network is. Balance all three to win!",
+  },
+  {
+    title: "You're Ready to Play!",
+    mood: 'celebrating',
+    speech:
+      "That's everything! You've got the knowledge to build the best network. Now get out there, crush those events, and climb to the top of the leaderboard. Good luck!",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Step content components
+// ---------------------------------------------------------------------------
+function WelcomeContent() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <h3 className="text-3xl font-bold text-primary drop-shadow-[0_0_16px_rgba(6,182,212,0.4)]">
+          rApp Tycoon
+        </h3>
+        <p className="text-text-muted text-sm mt-1">Deploy. Optimise. Dominate the network.</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { icon: <Wifi size={18} className="text-primary" />, label: '5G Network Management' },
+          { icon: <Trophy size={18} className="text-warning" />, label: 'Competitive Multiplayer' },
+          { icon: <Zap size={18} className="text-accent" />, label: 'Real-time Strategy' },
+        ].map(({ icon, label }) => (
+          <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-xl border border-surface-lighter bg-surface text-center">
+            {icon}
+            <span className="text-[11px] text-text-muted leading-tight">{label}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-sm text-text-muted leading-relaxed">
+        Compete against up to 5 other players to manage a 5G network region for 5 minutes. Deploy the right apps, respond to incidents, and outscore the competition.
+      </p>
+    </div>
+  );
+}
+
+function MissionContent() {
+  return (
+    <div className="flex flex-col gap-3">
+      {[
+        {
+          icon: <Settings size={16} />,
+          color: 'text-primary',
+          bg: 'bg-primary/10 border-primary/20',
+          title: 'Deploy rApps',
+          desc: 'Place automation apps on your basestations to boost network metrics',
+        },
+        {
+          icon: <AlertTriangle size={16} />,
+          color: 'text-warning',
+          bg: 'bg-warning/10 border-warning/20',
+          title: 'Respond to Events',
+          desc: 'Counter incidents before they escalate and damage your score',
+        },
+        {
+          icon: <Trophy size={16} />,
+          color: 'text-accent',
+          bg: 'bg-accent/10 border-accent/20',
+          title: 'Score the Highest',
+          desc: 'The player with the best composite score after 60 ticks wins!',
+        },
+      ].map(({ icon, color, bg, title, desc }) => (
+        <div key={title} className={`flex items-start gap-3 p-3 rounded-xl border ${bg}`}>
+          <div className={`mt-0.5 shrink-0 ${color}`}>{icon}</div>
+          <div>
+            <p className={`text-sm font-semibold ${color}`}>{title}</p>
+            <p className="text-xs text-text-muted mt-0.5">{desc}</p>
+          </div>
+        </div>
+      ))}
+      <div className="rounded-xl border border-surface-lighter bg-surface px-4 py-2.5">
+        <p className="text-xs text-text-muted text-center">
+          ⏱ <span className="text-text font-medium">60 ticks (~5 min)</span> &nbsp;·&nbsp; 👥 <span className="text-text font-medium">2–6 players</span> &nbsp;·&nbsp; 🤖 Bots supported
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BasestationsContent() {
+  const metrics = [
+    { label: 'Health', a: 85, b: 72, c: 91, color: 'bg-accent' },
+    { label: 'Customer Exp.', a: 78, b: 65, c: 88, color: 'bg-primary' },
+    { label: 'Energy Eff.', a: 70, b: 83, c: 62, color: 'bg-warning' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-3 gap-2">
+        {(['Alpha', 'Beta', 'Gamma'] as const).map((name, i) => (
+          <div key={name} className="rounded-xl border border-surface-lighter bg-surface p-2.5">
+            <div className="flex justify-center mb-2">
+              <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
+                <Wifi size={14} className="text-primary" />
+              </div>
+            </div>
+            <p className="text-[11px] font-semibold text-text text-center mb-2">{name}</p>
+            <div className="flex flex-col gap-1.5">
+              {metrics.map(({ label, a, b, c, color }) => {
+                const val = [a, b, c][i];
+                return (
+                  <div key={label}>
+                    <div className="flex justify-between text-[9px] text-text-muted mb-0.5">
+                      <span>{label}</span>
+                      <span>{val}%</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-surface-lighter">
+                      <div className={`h-1 rounded-full ${color} transition-all`} style={{ width: `${val}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-surface-lighter bg-surface px-3 py-2">
+        <p className="text-xs text-text-muted leading-relaxed">
+          <span className="text-text font-medium">6 metrics per station:</span> Health, Customer Experience, Cost, Energy Efficiency, Automation Reliability, SLA Compliance.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const RAPP_CATALOGUE = [
+  { name: 'Energy Saver', Icon: Zap, color: 'text-accent', cost: 30, desc: 'Cuts energy costs' },
+  { name: 'Capacity Optimiser', Icon: Maximize, color: 'text-primary', cost: 50, desc: 'Boosts customer exp.' },
+  { name: 'Fault Predictor', Icon: Shield, color: 'text-warning', cost: 45, desc: 'Prevents failures' },
+  { name: 'SLA Guardian', Icon: FileCheck, color: 'text-danger', cost: 55, desc: 'Maintains SLA' },
+  { name: 'Config Drift Detector', Icon: Settings, color: 'text-primary', cost: 40, desc: 'Fixes config drift' },
+  { name: 'Traffic Balancer', Icon: GitBranch, color: 'text-accent', cost: 60, desc: 'Balances load' },
+  { name: 'Alarm Noise Reducer', Icon: BellOff, color: 'text-text-muted', cost: 35, desc: 'Clears false alarms' },
+];
+
+function RappCatalogueContent() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2">
+        {RAPP_CATALOGUE.map(({ name, Icon, color, cost, desc }) => (
+          <div key={name} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-surface-lighter bg-surface">
+            <div className={`shrink-0 ${color}`}>
+              <Icon size={16} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-text truncate">{name}</p>
+              <p className="text-[10px] text-text-muted">{desc} · €{cost}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+        <p className="text-xs text-text-muted leading-relaxed">
+          <span className="text-primary font-medium">7 rApp types</span> available. Drag from the left catalogue onto any basestation on the map — or click to pick a target.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ManageRappsContent() {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {[
+        {
+          Icon: Sliders,
+          action: 'Tune',
+          color: 'text-primary',
+          bg: 'bg-primary/10 border-primary/20',
+          desc: "Adjust threshold (1–100) and aggressiveness (LOW / MODERATE / HIGH) to fine-tune an rApp's impact on metrics.",
+        },
+        {
+          Icon: Power,
+          action: 'Disable',
+          color: 'text-warning',
+          bg: 'bg-warning/10 border-warning/20',
+          desc: "Instantly pause an rApp's effects. Useful if it's causing unintended side effects on a metric.",
+        },
+        {
+          Icon: RotateCcw,
+          action: 'Rollback',
+          color: 'text-danger',
+          bg: 'bg-danger/10 border-danger/20',
+          desc: 'Revert an rApp to its previous configuration if a tune went wrong.',
+        },
+      ].map(({ Icon, action, color, bg, desc }) => (
+        <div key={action} className={`flex items-start gap-3 p-3 rounded-xl border ${bg}`}>
+          <Icon size={17} className={`mt-0.5 shrink-0 ${color}`} />
+          <div>
+            <p className={`text-sm font-semibold ${color}`}>{action}</p>
+            <p className="text-xs text-text-muted mt-0.5 leading-relaxed">{desc}</p>
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-text-muted text-center">
+        Access these by clicking any basestation on the 3D map.
+      </p>
+    </div>
+  );
+}
+
+const EVENT_TYPES = [
+  { name: 'Power Outage', sev: 'HIGH', color: 'text-danger', bg: 'bg-danger/10 border-danger/25' },
+  { name: 'Traffic Spike', sev: 'MED', color: 'text-warning', bg: 'bg-warning/10 border-warning/25' },
+  { name: 'Hardware Failure', sev: 'HIGH', color: 'text-danger', bg: 'bg-danger/10 border-danger/25' },
+  { name: 'SLA Breach', sev: 'CRIT', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/25' },
+  { name: 'Interference', sev: 'LOW', color: 'text-primary', bg: 'bg-primary/10 border-primary/25' },
+  { name: 'Capacity Overflow', sev: 'MED', color: 'text-warning', bg: 'bg-warning/10 border-warning/25' },
+];
+
+function NetworkEventsContent() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2">
+        {EVENT_TYPES.map(({ name, sev, color, bg }) => (
+          <div key={name} className={`flex items-center gap-2 p-2.5 rounded-xl border ${bg}`}>
+            <AlertTriangle size={13} className={color} />
+            <div className="min-w-0">
+              <p className={`text-[11px] font-medium ${color} truncate`}>{name}</p>
+              <p className="text-[9px] text-text-muted">{sev}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-surface-lighter bg-surface p-3">
+        <div className="flex items-center gap-3 mb-1.5">
+          {[
+            { label: 'LOW', dot: 'bg-blue-400' },
+            { label: 'MED', dot: 'bg-warning' },
+            { label: 'HIGH', dot: 'bg-orange-400' },
+            { label: 'CRIT', dot: 'bg-danger' },
+          ].map(({ label, dot }) => (
+            <div key={label} className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${dot}`} />
+              <span className="text-[10px] text-text-muted">{label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-text-muted leading-relaxed">
+          Events escalate up to 3 times if ignored, then auto-resolve with permanent metric damage!
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ScoringContent() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="rounded-xl border border-surface-lighter bg-surface p-4">
+        <p className="text-[11px] text-text-muted text-center mb-3 uppercase tracking-wide">Composite Score Formula</p>
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm font-mono">
+          <span className="font-bold text-text">Score</span>
+          <span className="text-text-muted">=</span>
+          <span className="text-warning font-semibold">Money × 30%</span>
+          <span className="text-text-muted">+</span>
+          <span className="text-primary font-semibold">Satisfaction × 35%</span>
+          <span className="text-text-muted">+</span>
+          <span className="text-accent font-semibold">Stability × 35%</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { Icon: DollarSign, label: 'Money', pct: '30%', color: 'text-warning', bg: 'bg-warning/10 border-warning/20', desc: 'Starting €1,000 minus costs' },
+          { Icon: Users, label: 'Satisfaction', pct: '35%', color: 'text-primary', bg: 'bg-primary/10 border-primary/20', desc: 'Avg customer experience' },
+          { Icon: Activity, label: 'Stability', pct: '35%', color: 'text-accent', bg: 'bg-accent/10 border-accent/20', desc: 'Avg health & reliability' },
+        ].map(({ Icon, label, pct, color, bg, desc }) => (
+          <div key={label} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border ${bg}`}>
+            <Icon size={16} className={color} />
+            <p className={`text-[11px] font-semibold ${color}`}>{label}</p>
+            <p className={`text-lg font-bold ${color}`}>{pct}</p>
+            <p className="text-[10px] text-text-muted text-center leading-tight">{desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompleteContent() {
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <motion.div
+        animate={{ scale: [1, 1.12, 1], rotate: [0, 6, -6, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 0.8 }}
+        className="text-5xl"
+      >
+        🏆
+      </motion.div>
+      <div>
+        <h3 className="text-xl font-bold text-text">Tutorial Complete!</h3>
+        <p className="text-sm text-text-muted mt-1">You're ready to become a network tycoon.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 w-full">
+        {[
+          { emoji: '📡', text: 'Deploy rApps to boost your metrics' },
+          { emoji: '⚡', text: 'Respond fast to network events' },
+          { emoji: '🎯', text: 'Balance money, satisfaction & stability' },
+          { emoji: '🥇', text: 'Climb to the top of the leaderboard' },
+        ].map(({ emoji, text }) => (
+          <div key={text} className="flex items-center gap-2 p-2.5 rounded-xl border border-surface-lighter bg-surface text-left">
+            <span className="text-base shrink-0">{emoji}</span>
+            <span className="text-xs text-text-muted leading-tight">{text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StepContent({ stepIndex }: { stepIndex: number }) {
+  switch (stepIndex) {
+    case 0: return <WelcomeContent />;
+    case 1: return <MissionContent />;
+    case 2: return <BasestationsContent />;
+    case 3: return <RappCatalogueContent />;
+    case 4: return <ManageRappsContent />;
+    case 5: return <NetworkEventsContent />;
+    case 6: return <ScoringContent />;
+    case 7: return <CompleteContent />;
+    default: return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main Tutorial Page
+// ---------------------------------------------------------------------------
+export function TutorialPage() {
+  const [stepIndex, setStepIndex] = useState(0);
+  const navigate = useNavigate();
+
+  const totalSteps = STEPS.length;
+  const currentStep = STEPS[stepIndex];
+  const isLast = stepIndex === totalSteps - 1;
+
+  const goNext = () => { if (!isLast) setStepIndex((i) => i + 1); };
+  const goBack = () => { if (stepIndex > 0) setStepIndex((i) => i - 1); };
+  const returnToLobby = () => navigate('/');
+
+  return (
+    <div className="relative flex h-full items-center justify-center p-4 bg-linear-to-br from-surface via-surface to-surface-light overflow-y-auto">
+      <div className="w-full max-w-2xl py-4">
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={returnToLobby}
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text transition-colors"
+          >
+            <Home size={14} />
+            <span>Back to Lobby</span>
+          </button>
+          <span className="text-xs text-text-muted font-medium">
+            {stepIndex + 1} / {totalSteps}
+          </span>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex justify-center items-center gap-1.5 mb-5">
+          {STEPS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setStepIndex(i)}
+              aria-label={`Go to step ${i + 1}`}
+              className={`rounded-full transition-all duration-300 ${
+                i === stepIndex
+                  ? 'w-6 h-2.5 bg-primary'
+                  : i < stepIndex
+                  ? 'w-2.5 h-2.5 bg-primary/40 hover:bg-primary/60'
+                  : 'w-2.5 h-2.5 bg-surface-lighter hover:bg-surface-light'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Main card */}
+        <div className="rounded-2xl border border-surface-lighter bg-surface-light p-5 md:p-6">
+
+          {/* Mascot + speech bubble */}
+          <div className="flex items-start gap-4 mb-5">
+            <MascotByte mood={currentStep.mood} />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`speech-${stepIndex}`}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.22 }}
+                className="relative flex-1"
+              >
+                {/* Arrow pointing left toward mascot */}
+                <div className="absolute -left-2 top-4 border-y-[7px] border-y-transparent border-r-8 border-r-surface" />
+                <div className="rounded-2xl rounded-tl-sm bg-surface border border-surface-lighter px-4 py-3">
+                  <p className="text-sm text-text leading-relaxed">{currentStep.speech}</p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Step title + content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`content-${stepIndex}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22 }}
+            >
+              <h2 className="text-lg font-bold text-text mb-4">{currentStep.title}</h2>
+              <StepContent stepIndex={stepIndex} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between mt-4">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={goBack}
+            disabled={stepIndex === 0}
+            className="flex items-center gap-1.5"
+          >
+            <ChevronLeft size={16} />
+            Back
+          </Button>
+
+          {isLast ? (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={returnToLobby}
+              className="flex items-center gap-1.5"
+            >
+              <Home size={16} />
+              Return to Lobby
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={goNext}
+              className="flex items-center gap-1.5"
+            >
+              Next
+              <ChevronRight size={16} />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
