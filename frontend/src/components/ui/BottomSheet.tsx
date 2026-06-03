@@ -55,7 +55,7 @@ export function BottomSheet({ strip, children }: BottomSheetProps) {
 
       {/* Always-visible strip (CatalogueStrip) */}
       {strip && (
-        <div className="px-1">
+        <div className="px-1 pb-[15px]">
           {strip}
         </div>
       )}

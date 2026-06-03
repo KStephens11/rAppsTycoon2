@@ -108,12 +108,18 @@ function hRGB(h: number): [number, number, number] {
                 { const f = (t - 0.65) / 0.35; return [lerp(52, 78, f), lerp(108, 162, f), lerp(165, 220, f)]; }
 }
 
-function faceColor(h: number, pulse: number, face: 'top' | 'left' | 'right'): string {
+function faceColor(h: number, pulse: number, pulseColor: [number, number, number], face: 'top' | 'left' | 'right'): string {
   let [r, g, b] = hRGB(h);
   if (pulse > 0) {
-    r = lerp(r, 6 * 255 / 100, pulse * 0.45);
-    g = lerp(g, 182 * 255 / 255, pulse * 0.5);
-    b = lerp(b, 212 * 255 / 255, pulse * 0.65);
+    // Blend 50% original cyan with 50% status color for a subtler effect
+    const cyanR = 6, cyanG = 182, cyanB = 212;
+    const blendedR = (cyanR + pulseColor[0]) / 2;
+    const blendedG = (cyanG + pulseColor[1]) / 2;
+    const blendedB = (cyanB + pulseColor[2]) / 2;
+    
+    r = lerp(r, blendedR, pulse * 0.45);
+    g = lerp(g, blendedG, pulse * 0.5);
+    b = lerp(b, blendedB, pulse * 0.65);
   }
   const dim = face === 'left' ? 0.50 : face === 'right' ? 0.70 : 1.0;
   return `rgb(${Math.round(Math.min(255, r * dim))},${Math.round(Math.min(255, g * dim))},${Math.round(Math.min(255, b * dim))})`;
@@ -188,9 +194,11 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
     const ro = new ResizeObserver(resize);
     ro.observe(container);
 
-    function getPulse(gc: number, gr: number, t: number): number {
+    function getPulse(gc: number, gr: number, t: number): { intensity: number; color: [number, number, number] } {
       const stations = stationCells();
       let maxP = 0;
+      let pulseColor: [number, number, number] = [6, 182, 212]; // Default cyan
+      
       for (const st of stations) {
         const dist = Math.sqrt((gc - st.gc) ** 2 + (gr - st.gr) ** 2);
         const maxR = 8, speed = 0.7;
@@ -199,21 +207,34 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
           const delta = Math.abs(dist - front);
           if (delta < 2.0) {
             const intensity = Math.pow(1 - delta / 2, 2) * Math.max(0, 1 - dist / maxR);
-            maxP = Math.max(maxP, intensity * 0.8);
+            if (intensity * 0.8 > maxP) {
+              maxP = intensity * 0.8;
+              // Use the basestation's status color
+              const statusColor = STATUS_COLOR[st.status];
+              if (statusColor.startsWith('#')) {
+                pulseColor = [
+                  parseInt(statusColor.slice(1, 3), 16),
+                  parseInt(statusColor.slice(3, 5), 16),
+                  parseInt(statusColor.slice(5, 7), 16)
+                ];
+              }
+            }
           }
         }
       }
-      return maxP;
+      return { intensity: maxP, color: pulseColor };
     }
 
     function drawBlock(
       ctx: CanvasRenderingContext2D,
       gc: number, gr: number,
-      bh: number, pulse: number,
+      bh: number, pulseData: { intensity: number; color: [number, number, number] },
       ox: number, oy: number,
     ) {
       const [tx, ty] = iso(gc, gr, ox, oy);
       const hw = TW / 2 - GAP;
+      const pulse = pulseData.intensity;
+      const pulseColor = pulseData.color;
       const hh = TH / 2 - GAP * 0.5;
 
       // left face (west)
@@ -223,7 +244,7 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       ctx.lineTo(tx - hw, ty - hh);        // bottom left
       ctx.lineTo(tx,      ty);             // bottom center
       ctx.closePath();
-      ctx.fillStyle = faceColor(bh, pulse, 'left');
+      ctx.fillStyle = faceColor(bh, pulse, pulseColor, 'left');
       ctx.fill();
 
       // right face (east)
@@ -233,7 +254,7 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       ctx.lineTo(tx + hw, ty - hh);        // bottom right
       ctx.lineTo(tx,      ty);             // bottom center
       ctx.closePath();
-      ctx.fillStyle = faceColor(bh, pulse, 'right');
+      ctx.fillStyle = faceColor(bh, pulse, pulseColor, 'right');
       ctx.fill();
 
       // top face (proper isometric diamond)
@@ -243,7 +264,7 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       ctx.lineTo(tx,      ty - hh - hh - bh); // back (symmetric with front-right-left)
       ctx.lineTo(tx - hw, ty - hh - bh);     // left
       ctx.closePath();
-      ctx.fillStyle = faceColor(bh, pulse, 'top');
+      ctx.fillStyle = faceColor(bh, pulse, pulseColor, 'top');
       ctx.fill();
 
       // subtle edge highlight on tall buildings
@@ -473,8 +494,8 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       const blendG = Math.round(cyanG * 0.3 + scRgb.g * 0.7);
       const blendB = Math.round(cyanB * 0.3 + scRgb.b * 0.7);
       
-      ctx.strokeStyle = `rgba(${blendR}, ${blendG}, ${blendB}, ${0.5 * pulse})`;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(${blendR}, ${blendG}, ${blendB}, ${0.2 * pulse})`;
+      ctx.lineWidth = 1.5;
       for (let r = 1; r <= 3; r++) {
         ctx.beginPath();
         ctx.arc(tx, lightY, 8 + r * 4, 0, Math.PI * 2);
@@ -604,8 +625,8 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
           const c = diag - r;
           if (c < 0 || c >= COLS) continue;
           const bh = HEIGHT_MAP[r][c];
-          const pulse = getPulse(c, r, wt);
-          drawBlock(ctx, c, r, bh, pulse, ox, oy);
+          const pulseData = getPulse(c, r, wt);
+          drawBlock(ctx, c, r, bh, pulseData, ox, oy);
           
           // If there's a station at this grid position, draw it immediately after the building
           const station = stationMap.get(`${c},${r}`);
