@@ -18,19 +18,17 @@ pipeline {
         stage('Test') {
             steps {
                 dir('backend') {
-                    sh './mvnw -B test jacoco:report -DskipITs'
+                    sh './mvnw -B test jacoco:report'
                 }
             }
             post {
                 always {
                     junit 'backend/target/surefire-reports/*.xml'
-
                     jacoco(
                         execPattern: '**/target/jacoco.exec',
                         classPattern: '**/target/classes',
                         sourcePattern: '**/src/main/java'
                     )
-
                     publishHTML(target: [
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
@@ -38,26 +36,6 @@ pipeline {
                         reportDir: 'backend/target/site/jacoco',
                         reportFiles: 'index.html',
                         reportName: 'JaCoCo Code Coverage'
-                    ])
-                }
-            }
-        }
-
-        stage('Karate Tests') {
-            steps {
-                dir('backend') {
-                    sh './mvnw -B test -Dtest=*KarateTest'
-                }
-            }
-            post {
-                always {
-                    publishHTML(target: [
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'backend/target/karate-reports',
-                        reportFiles: 'karate-summary.html',
-                        reportName: 'Karate Summary'
                     ])
                 }
             }
@@ -91,12 +69,23 @@ pipeline {
                 branch 'main'
             }
             steps {
+                sh 'kubectl apply -f k8s/secret.yaml'
+                sh 'kubectl apply -f k8s/configmap.yaml'
+                sh 'kubectl apply -f k8s/mysql-pvc.yaml'
+                sh 'kubectl apply -f k8s/mysql-deployment.yaml'
+                sh 'kubectl apply -f k8s/mysql-service.yaml'
+                sh 'kubectl apply -f k8s/backend-deployment.yaml'
+                sh 'kubectl apply -f k8s/backend-service.yaml'
+                sh 'kubectl apply -f k8s/event-generator-deployment.yaml'
+                sh 'kubectl apply -f k8s/frontend-deployment.yaml'
+                sh 'kubectl apply -f k8s/frontend-service.yaml'
+                sh 'kubectl apply -f k8s/frontend-hpa.yaml'
                 sh "kubectl set image deployment/backend backend=${IMAGE_BACKEND}"
                 sh "kubectl set image deployment/event-generator event-generator=${IMAGE_EVENT_GENERATOR}"
                 sh "kubectl set image deployment/frontend frontend=${IMAGE_FRONTEND}"
-                sh "kubectl rollout status deployment/backend"
-                sh "kubectl rollout status deployment/event-generator"
-                sh "kubectl rollout status deployment/frontend"
+                sh 'kubectl rollout status deployment/backend'
+                sh 'kubectl rollout status deployment/event-generator'
+                sh 'kubectl rollout status deployment/frontend'
             }
         }
     }
