@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
-import { Radio, User, AlertTriangle } from 'lucide-react';
+import { Radio } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useWebSocket } from '../hooks';
 import { useGameState, type GameEvent } from '../hooks';
@@ -93,7 +93,7 @@ export function GamePage() {
 }
 
 function GamePageInner() {
-  const { gameState, sessionCode, token, playerId, players } = useGame();
+  const { gameState, sessionCode, token, playerId } = useGame();
   const ws = useWebSocket();
   const realTimeState = useGameState();
   const { playDeploy, playEventAlert, playGameEnd } = useSoundEffects();
@@ -393,15 +393,9 @@ function GamePageInner() {
     return [...restEvents, ...rtEvents.filter((e) => !restIds.has(e.id))];
   }, [basestations, realTimeState.events]);
 
-  const currentPlayerName = useMemo(
-    () => players.find((p) => p.id === playerId)?.displayName ?? 'Player',
-    [players, playerId],
-  );
-
   return (
     <div className="flex flex-col h-full relative">
       {/* Overlays (unchanged) */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <EventAlertContainer alerts={eventAlerts} onDismiss={dismissEventAlert} />
       <DragPreview />
 
@@ -433,33 +427,32 @@ function GamePageInner() {
           />
         )}
 
-        {/* Settings + player */}
+        {/* Settings */}
         <SettingsToolbar />
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-light border border-surface-lighter">
-          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-            <User size={11} className="text-primary" />
-          </div>
-          <span className="text-xs font-medium text-text">{currentPlayerName}</span>
-        </div>
       </header>
 
       {/* ── 3-column main area ── */}
       <div className="flex flex-1 min-h-0">
 
-        {/* Center — Map (full width, catalog and overlays float on top) */}
+        {/* Center — Map (full width, overlays float on top) */}
         <div className="flex-1 relative min-w-0 min-h-0">
-          {/* Floating rApp Catalog — left side, full map height */}
-          <div className="absolute top-3 bottom-3 left-3 z-10 w-60 hidden md:flex flex-col bg-surface/90 backdrop-blur-sm border border-surface-lighter/60 rounded-lg shadow-lg overflow-hidden">
-            <div className="px-3 py-2 border-b border-surface-lighter/60 shrink-0">
+          {/* Toast notifications — inside map area */}
+          <div className="absolute bottom-3 right-3 z-20">
+            <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+          </div>
+
+          {/* Floating Leaderboard — top left */}
+          <div className="absolute top-3 left-3 z-10 w-52 hidden md:block bg-surface/80 backdrop-blur-sm border border-surface-lighter/50 rounded-lg shadow-lg overflow-hidden">
+            <div className="px-3 py-2 border-b border-surface-lighter/50">
               <h2 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-                rAPP Catalog
+                Leaderboard
               </h2>
             </div>
-            <div className="overflow-y-auto p-3">
-              <RappCatalogue
-                basestations={basestations.map((bs) => ({ id: bs.id, name: bs.name }))}
-                onConfirmDeploy={handleConfirmDeploy}
-              />
+            <div className="p-2 max-h-52 overflow-y-auto">
+              {realTimeState.leaderboard.length === 0
+                ? <LeaderboardSkeleton />
+                : <MemoizedLeaderboard entries={realTimeState.leaderboard} currentPlayerId={playerId} />
+              }
             </div>
           </div>
 
@@ -493,43 +486,32 @@ function GamePageInner() {
           )}
         </div>
 
-        {/* Right panel — Session Scoreboard */}
-        <div className="hidden md:flex w-56 bg-surface border-l border-surface-lighter flex-col shrink-0">
-          <div className="px-3 py-2 border-b border-surface-lighter">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-              Session Scoreboard
-            </h2>
-          </div>
+        {/* Right panel — Active Events */}
+        <div className="hidden md:flex w-64 bg-surface border-l border-surface-lighter flex-col shrink-0">
           <div className="flex-1 overflow-y-auto p-3">
-            {realTimeState.leaderboard.length === 0
-              ? <LeaderboardSkeleton />
-              : <MemoizedLeaderboard entries={realTimeState.leaderboard} currentPlayerId={playerId} />
-            }
+            <div className="relative">
+              {showResolutionCelebration && (
+                <Confetti duration={2000} particleCount={80} contained />
+              )}
+              <MemoizedEventPanel events={combinedActiveEvents} />
+            </div>
           </div>
-
         </div>
       </div>
 
-      {/* ── Bottom bar — Live Incident Feed (full width) ── */}
-      <div className="hidden md:flex h-52 border-t border-surface-lighter shrink-0 bg-surface">
-        <div className="relative flex flex-col w-full overflow-hidden">
-          {/* Confetti burst contained to this box when an event is resolved */}
-          {showResolutionCelebration && (
-            <Confetti duration={2000} particleCount={80} contained />
-          )}
-          <div className="px-4 py-2 border-b border-surface-lighter flex items-center gap-2 shrink-0">
-            <AlertTriangle size={11} className={combinedActiveEvents.length > 0 ? 'text-warning' : 'text-text-muted'} />
+      {/* ── Bottom bar — rApp Catalogue (full width) ── */}
+      <div className="hidden md:flex h-28 border-t border-surface-lighter shrink-0 bg-surface">
+        <div className="flex flex-col w-full">
+          <div className="px-4 py-1 shrink-0">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-              Live Incident Feed
+              rApp Catalogue
             </h3>
-            {combinedActiveEvents.length > 0 && (
-              <span className="text-[10px] font-medium text-warning">
-                ({combinedActiveEvents.length} active)
-              </span>
-            )}
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-2">
-            <MemoizedEventPanel events={combinedActiveEvents} />
+          <div className="flex-1 px-4 py-1">
+            <RappCatalogue
+              basestations={basestations.map((bs) => ({ id: bs.id, name: bs.name }))}
+              onConfirmDeploy={handleConfirmDeploy}
+            />
           </div>
         </div>
       </div>
