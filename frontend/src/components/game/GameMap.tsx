@@ -506,7 +506,13 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
 
       const stations = stationCells();
 
-      // painter's order: back-to-front diagonal
+      // Create a map of stations by grid position for quick lookup
+      const stationMap = new Map<string, typeof stations[0]>();
+      for (const st of stations) {
+        stationMap.set(`${st.gc},${st.gr}`, st);
+      }
+
+      // painter's order: back-to-front diagonal, interleaving buildings and stations
       for (let diag = 0; diag < COLS + ROWS - 1; diag++) {
         for (let r = 0; r < ROWS; r++) {
           const c = diag - r;
@@ -514,13 +520,17 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
           const bh = HEIGHT_MAP[r][c];
           const pulse = getPulse(c, r, wt);
           drawBlock(ctx, c, r, bh, pulse, ox, oy);
+          
+          // If there's a station at this grid position, draw it immediately after the building
+          const station = stationMap.get(`${c},${r}`);
+          if (station) {
+            drawStation(ctx, station.gc, station.gr, bh, station.status, t, ox, oy);
+          }
         }
       }
 
+      // Draw drop zone highlights (on top of everything)
       for (const st of stations) {
-        const bh = HEIGHT_MAP[st.gr][st.gc];
-        drawStation(ctx, st.gc, st.gr, bh, st.status, t, ox, oy);
-        
         // Draw drop zone highlight if dragging over this station
         if (hoveredStationRef.current === st.id && dragStateRef.current) {
           const [tx, ty] = iso(st.gc, st.gr, ox, oy);
