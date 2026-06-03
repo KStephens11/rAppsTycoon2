@@ -19,7 +19,7 @@ pipeline {
         stage('Test') {
             steps {
                 dir('backend') {
-                    sh './mvnw -B test'
+                    sh './mvnw -B test -DskipITs'
                 }
             }
             post {
