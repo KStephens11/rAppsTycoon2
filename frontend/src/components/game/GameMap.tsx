@@ -236,12 +236,12 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       ctx.fillStyle = faceColor(bh, pulse, 'right');
       ctx.fill();
 
-      // top face
+      // top face (proper isometric diamond)
       ctx.beginPath();
-      ctx.moveTo(tx,      ty - bh);        // top center
-      ctx.lineTo(tx + hw, ty - hh - bh);   // top right
-      ctx.lineTo(tx,      ty - TH - bh);   // top back
-      ctx.lineTo(tx - hw, ty - hh - bh);   // top left
+      ctx.moveTo(tx,      ty - bh);          // front
+      ctx.lineTo(tx + hw, ty - hh - bh);     // right
+      ctx.lineTo(tx,      ty - hh - hh - bh); // back (symmetric with front-right-left)
+      ctx.lineTo(tx - hw, ty - hh - bh);     // left
       ctx.closePath();
       ctx.fillStyle = faceColor(bh, pulse, 'top');
       ctx.fill();
@@ -482,6 +482,49 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       }
     }
 
+    function drawNameplate(
+      ctx: CanvasRenderingContext2D,
+      tx: number,
+      baseY: number,
+      name: string,
+    ) {
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      
+      // Nameplate position (below platform)
+      const nameplateY = baseY + 8;
+      
+      // Measure text
+      ctx.font = 'bold 9px sans-serif';
+      const textWidth = ctx.measureText(name).width;
+      const padding = 4;
+      const plateWidth = textWidth + padding * 2;
+      const plateHeight = 14;
+      
+      // Nameplate background (rounded rectangle)
+      const plateLeft = tx - plateWidth / 2;
+      const plateTop = nameplateY;
+      const radius = 3;
+      
+      ctx.fillStyle = 'rgba(15, 20, 35, 0.85)';
+      ctx.beginPath();
+      ctx.roundRect(plateLeft, plateTop, plateWidth, plateHeight, radius);
+      ctx.fill();
+      
+      // Nameplate border
+      ctx.strokeStyle = 'rgba(60, 80, 120, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(plateLeft, plateTop, plateWidth, plateHeight, radius);
+      ctx.stroke();
+      
+      // Nameplate text
+      ctx.fillStyle = '#e5e7eb';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(name, tx, nameplateY + plateHeight / 2);
+    }
+
     function frame(ts: number) {
       if (!t0Ref.current) t0Ref.current = ts;
       const t = (ts - t0Ref.current) / 1000;
@@ -503,6 +546,45 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       // Origin for iso grid (centred at 0,0 in world space)
       const ox = 0;
       const oy = -(ROWS * TH) / 4;
+
+      // Draw infinite isometric grid plane (only visible portion)
+      // Isometric grid lines follow the tile edges, forming diamond shapes
+      const visibleLeft = (-W / 2 - cam.x) / cam.zoom;
+      const visibleRight = (W / 2 - cam.x) / cam.zoom;
+      const visibleTop = (-H / 2 - cam.y) / cam.zoom;
+      const visibleBottom = (H / 2 - cam.y) / cam.zoom;
+      
+      const gridPadding = 500;
+      
+      ctx.strokeStyle = 'rgba(60, 80, 120, 0.12)';
+      ctx.lineWidth = 0.5;
+      
+      // Estimate which grid cells might be visible
+      // Convert screen bounds to approximate grid coordinates
+      const minCol = Math.floor((visibleLeft - gridPadding) / (TW / 2)) - 30;
+      const maxCol = Math.ceil((visibleRight + gridPadding) / (TW / 2)) + 30;
+      const minRow = Math.floor((visibleTop - gridPadding) / (TH / 2)) - 60;
+      const maxRow = Math.ceil((visibleBottom + gridPadding) / (TH / 2)) + 60;
+      
+      // Draw column lines (constant c, varying r)
+      for (let c = minCol; c <= maxCol; c++) {
+        const [x1, y1] = iso(c, minRow, ox, oy);
+        const [x2, y2] = iso(c, maxRow, ox, oy);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+      
+      // Draw row lines (constant r, varying c)
+      for (let r = minRow; r <= maxRow; r++) {
+        const [x1, y1] = iso(minCol, r, ox, oy);
+        const [x2, y2] = iso(maxCol, r, ox, oy);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
 
       const stations = stationCells();
 
@@ -527,6 +609,14 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
             drawStation(ctx, station.gc, station.gr, bh, station.status, t, ox, oy);
           }
         }
+      }
+
+      // Draw nameplates on top of everything
+      for (const st of stations) {
+        const [tx, ty] = iso(st.gc, st.gr, ox, oy);
+        const bh = HEIGHT_MAP[st.gr][st.gc];
+        const baseY = ty - bh;
+        drawNameplate(ctx, tx, baseY, st.name);
       }
 
       // Draw drop zone highlights (on top of everything)
