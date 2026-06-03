@@ -206,6 +206,34 @@ public class GameSessionService {
         return buildSessionResponse(session, players);
     }
 
+    /**
+     * Removes a player from a lobby session. If the host leaves, the session is ended.
+     */
+    @Transactional
+    public void leaveSession(String code, String token) {
+        Player player = playerRepository.findBySessionToken(token)
+                .orElseThrow(() -> new UnauthorizedException("Invalid session token"));
+        GameSession session = findSessionByCode(code);
+
+        if (!player.getSessionId().equals(session.getId())) {
+            throw new ForbiddenException("Player is not a member of this session");
+        }
+
+        if (session.getState() != GameSessionState.LOBBY) {
+            throw new InvalidStateException("Cannot leave a session that is not in LOBBY state");
+        }
+
+        if (player.getId().equals(session.getHostPlayerId())) {
+            // Host leaving — end the session
+            session.setState(GameSessionState.COMPLETED);
+            session.setEndedAt(LocalDateTime.now());
+            gameSessionRepository.save(session);
+        } else {
+            // Non-host leaving — remove the player
+            playerRepository.delete(player);
+        }
+    }
+
     private GameSession findSessionByCode(String code) {
         return gameSessionRepository.findBySessionCode(code)
                 .orElseThrow(() -> new SessionNotFoundException(code));

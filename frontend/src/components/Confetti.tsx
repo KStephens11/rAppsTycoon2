@@ -13,9 +13,17 @@ interface Particle {
 }
 
 const COLORS = ['#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#f43f5e', '#14b8a6'];
-const PARTICLE_COUNT = 150;
 
-export function Confetti({ duration = 5000 }: { duration?: number }) {
+export function Confetti({
+  duration = 5000,
+  particleCount = 150,
+  contained = false,
+}: {
+  duration?: number;
+  particleCount?: number;
+  /** If true, renders as absolute (fill parent) instead of fixed (fill viewport) */
+  contained?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
@@ -27,12 +35,18 @@ export function Confetti({ duration = 5000 }: { duration?: number }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const getSize = () => contained
+      ? { w: canvas.parentElement?.clientWidth ?? window.innerWidth,
+          h: canvas.parentElement?.clientHeight ?? window.innerHeight }
+      : { w: window.innerWidth, h: window.innerHeight };
+
+    const { w, h } = getSize();
+    canvas.width = w;
+    canvas.height = h;
 
     const particles: Particle[] = [];
 
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
+    for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: -20 - Math.random() * canvas.height * 0.5,
@@ -85,8 +99,9 @@ export function Confetti({ duration = 5000 }: { duration?: number }) {
     animationRef.current = requestAnimationFrame(animate);
 
     const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const { w, h } = getSize();
+      canvas.width = w;
+      canvas.height = h;
     };
     window.addEventListener('resize', handleResize);
 
@@ -99,7 +114,7 @@ export function Confetti({ duration = 5000 }: { duration?: number }) {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-50"
+      className={`${contained ? 'absolute' : 'fixed'} inset-0 pointer-events-none z-50`}
       aria-hidden="true"
     />
   );

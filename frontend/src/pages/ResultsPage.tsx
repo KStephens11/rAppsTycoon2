@@ -56,10 +56,11 @@ export function ResultsPage() {
 
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto">
+      {/* Confetti — rendered at the top level of the fixed container */}
+      <Confetti duration={6000} contained />
+
       {/* Dark gradient overlay */}
       <div className="min-h-full bg-gradient-to-b from-surface via-surface-light to-surface p-6 flex flex-col items-center">
-        {/* Confetti for the winner */}
-        <Confetti duration={6000} />
 
         {/* Winner Announcement */}
         <motion.div

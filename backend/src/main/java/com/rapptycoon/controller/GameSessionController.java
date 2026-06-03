@@ -53,4 +53,12 @@ public class GameSessionController {
         SessionResponse response = gameSessionService.getSession(code, token);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/{code}/leave")
+    public ResponseEntity<Void> leaveSession(
+            @PathVariable String code,
+            @RequestHeader("X-Session-Token") String token) {
+        gameSessionService.leaveSession(code, token);
+        return ResponseEntity.noContent().build();
+    }
 }
