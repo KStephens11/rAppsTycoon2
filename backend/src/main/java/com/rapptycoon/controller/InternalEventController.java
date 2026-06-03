@@ -79,13 +79,22 @@ public class InternalEventController {
 
         List<ActiveSessionDto> sessionDtos = activeSessions.stream()
                 .map(session -> {
-                    int playerCount = playerRepository.findBySessionId(session.getId()).size();
+                    var players = playerRepository.findBySessionId(session.getId());
+                    int playerCount = players.size();
                     List<Long> basestationIds = getAllBasestationIdsForSession(session.getId());
+
+                    // Group basestation IDs by player (ordered consistently)
+                    List<List<Long>> basestationIdsByPlayer = players.stream()
+                            .map(player -> basestationRepository.findByPlayerId(player.getId()).stream()
+                                    .map(Basestation::getId)
+                                    .toList())
+                            .toList();
 
                     return new ActiveSessionDto(
                             session.getSessionCode(),
                             playerCount,
                             basestationIds,
+                            basestationIdsByPlayer,
                             session.getStartedAt()
                     );
                 })
