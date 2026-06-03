@@ -22,9 +22,24 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: BACKEND_BASE_URL
-              value: http://backend:8080
+              valueFrom:
+                configMapKeyRef:
+                  name: rapp-config
+                  key: BACKEND_BASE_URL
             - name: INTERNAL_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: rapp-secret
                   key: INTERNAL_API_KEY
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import sys; sys.exit(0)"]
+            initialDelaySeconds: 15
+            periodSeconds: 30

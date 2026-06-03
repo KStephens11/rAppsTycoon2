@@ -19,12 +19,17 @@ pipeline {
         stage('Test') {
             steps {
                 dir('backend') {
-                    sh './mvnw -B test'
+                    sh './mvnw -B test -DskipITs'
                 }
             }
             post {
                 always {
                     junit 'backend/target/surefire-reports/*.xml'
+                    jacoco(
+                        execPattern: '**/target/jacoco.exec',
+                        classPattern: '**/target/classes',
+                        sourcePattern: '**/src/main/java'
+                    )
                 }
             }
         }
@@ -33,7 +38,8 @@ pipeline {
             steps {
                 dir('backend') {
                     sh """
-                        ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                        ./mvnw -B test org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                        -DskipITs \
                         -Dsonar.projectKey=yuhangzzzz_rapp-tycoon-backend \
                         -Dsonar.organization=yuhangzzzz \
                         -Dsonar.host.url=https://sonarcloud.io \

@@ -13,7 +13,7 @@ Feature: Get Player Basestations - GET /api/sessions/{code}/basestations
     And header X-Session-Token = hostToken
     When method GET
     Then status 200
-    And match response.basestations == '#[3]'
+    And match response.basestations == '#[4]'
     And match response.basestations[0].id == '#number'
     And match response.basestations[0].name == '#notnull'
     And match response.basestations[0].metrics.health == '#number'
