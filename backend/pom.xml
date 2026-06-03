@@ -100,9 +100,9 @@
 
         <!-- Karate API Integration Testing -->
         <dependency>
-            <groupId>com.intuit.karate</groupId>
+            <groupId>io.karatelabs</groupId>
             <artifactId>karate-junit5</artifactId>
-            <version>1.4.0</version>
+            <version>1.5.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -159,7 +159,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <excludedGroups>e2e</excludedGroups>
-                    <argLine>-XX:+EnableDynamicAgentLoading --add-opens=java.base/sun.misc=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
 
@@ -170,7 +169,6 @@
                     <includes>
                         <include>**/KarateRunner.java</include>
                     </includes>
-                    <argLine>-XX:+EnableDynamicAgentLoading --add-opens=java.base/sun.misc=ALL-UNNAMED</argLine>
                 </configuration>
                 <executions>
                     <execution>
