@@ -54,5 +54,26 @@ services:
     depends_on:
       - backend
 
+  # Bot player service - for local development/testing only.
+  # Bots are normally spawned dynamically as K8s pods by the backend BotManager.
+  # To test locally: docker compose --profile bot run bot-player
+  bot-player:
+    build: ./bot-player
+    container_name: rapp-bot-player
+    profiles:
+      - bot
+    ports:
+      - "8081:8081"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      SESSION_CODE: ${SESSION_CODE:-TEST123}
+      SESSION_TOKEN: ${SESSION_TOKEN:-changeme}
+      DIFFICULTY: ${DIFFICULTY:-MEDIUM}
+      BACKEND_BASE_URL: http://backend:8080
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      HEALTH_PORT: "8081"
+
 volumes:
   mysql_data:

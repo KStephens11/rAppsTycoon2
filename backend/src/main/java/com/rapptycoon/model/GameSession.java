@@ -38,6 +38,10 @@ public class GameSession {
     @Builder.Default
     private int currentTick = 0;
 
+    @Column(name = "game_duration_minutes", nullable = false)
+    @Builder.Default
+    private int gameDurationMinutes = 5;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -46,4 +50,12 @@ public class GameSession {
 
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
+
+    /**
+     * Compute the total number of ticks for this session based on duration.
+     * With a 5-second tick interval: 1 min = 12 ticks, 5 min = 60 ticks.
+     */
+    public int getTotalTicks() {
+        return gameDurationMinutes * 12; // 60 seconds / 5 seconds per tick = 12 ticks per minute
+    }
 }

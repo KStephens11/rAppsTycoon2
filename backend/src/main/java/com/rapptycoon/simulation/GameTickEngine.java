@@ -10,6 +10,7 @@ import com.rapptycoon.repository.*;
 import com.rapptycoon.service.BasestationService;
 import com.rapptycoon.service.EventService;
 import com.rapptycoon.service.GameSessionService;
+import com.rapptycoon.service.InProcessBotPlayer;
 import com.rapptycoon.service.RappService;
 import com.rapptycoon.service.ScoreService;
 import com.rapptycoon.websocket.MessageType;
@@ -34,7 +35,6 @@ public class GameTickEngine {
 
     private final GameSessionRepository gameSessionRepository;
     private final RappDeploymentRepository rappDeploymentRepository;
-    private final GameEventRepository gameEventRepository;
     private final BasestationRepository basestationRepository;
     private final RappTemplateRepository rappTemplateRepository;
     private final PlayerRepository playerRepository;
@@ -48,10 +48,10 @@ public class GameTickEngine {
     private final WebSocketBroadcaster broadcaster;
 
     private final GameTickEngine self;
+    private final InProcessBotPlayer inProcessBotPlayer;
 
     public GameTickEngine(GameSessionRepository gameSessionRepository,
                           RappDeploymentRepository rappDeploymentRepository,
-                          GameEventRepository gameEventRepository,
                           BasestationRepository basestationRepository,
                           RappTemplateRepository rappTemplateRepository,
                           PlayerRepository playerRepository,
@@ -63,10 +63,10 @@ public class GameTickEngine {
                           RappService rappService,
                           GameProperties gameProperties,
                           WebSocketBroadcaster broadcaster,
+                          InProcessBotPlayer inProcessBotPlayer,
                           @Lazy GameTickEngine self) {
         this.gameSessionRepository = gameSessionRepository;
         this.rappDeploymentRepository = rappDeploymentRepository;
-        this.gameEventRepository = gameEventRepository;
         this.basestationRepository = basestationRepository;
         this.rappTemplateRepository = rappTemplateRepository;
         this.playerRepository = playerRepository;
@@ -78,6 +78,7 @@ public class GameTickEngine {
         this.rappService = rappService;
         this.gameProperties = gameProperties;
         this.broadcaster = broadcaster;
+        this.inProcessBotPlayer = inProcessBotPlayer;
         this.self = self;
     }
 
@@ -124,12 +125,19 @@ public class GameTickEngine {
         // 8. Broadcast updates via WebSocket
         broadcastTickUpdates(session);
 
-        // 9. Increment tick counter
+        // 9. Execute bot player actions (in-process, for non-K8s environments)
+        try {
+            inProcessBotPlayer.executeBotActions(session.getId(), session.getSessionCode());
+        } catch (Exception e) {
+            log.warn("Error executing bot actions for session {}: {}", session.getSessionCode(), e.getMessage());
+        }
+
+        // 10. Increment tick counter
         session.setCurrentTick(currentTick + 1);
         gameSessionRepository.save(session);
 
-        // 10. Check game end condition
-        if (session.getCurrentTick() >= gameProperties.getTick().getTotal()) {
+        // 11. Check game end condition
+        if (session.getCurrentTick() >= session.getTotalTicks()) {
             gameSessionService.endSession(session.getSessionCode());
             broadcaster.broadcastToSession(session.getSessionCode(),
                     WebSocketMessage.of(MessageType.GAME_ENDED, scoreService.getLeaderboard(session.getSessionCode())));

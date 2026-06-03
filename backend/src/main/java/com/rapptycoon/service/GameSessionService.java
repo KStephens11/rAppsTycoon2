@@ -8,6 +8,8 @@ import com.rapptycoon.model.GameSessionState;
 import com.rapptycoon.model.Player;
 import com.rapptycoon.repository.GameSessionRepository;
 import com.rapptycoon.repository.PlayerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,8 @@ import java.util.List;
 @Service
 public class GameSessionService {
 
+    private static final Logger log = LoggerFactory.getLogger(GameSessionService.class);
+
     private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 8;
     private static final int TOKEN_LENGTH = 64;
@@ -27,16 +31,19 @@ public class GameSessionService {
     private final PlayerRepository playerRepository;
     private final GameProperties gameProperties;
     private final BasestationService basestationService;
+    private final BotManager botManager;
     private final SecureRandom secureRandom;
 
     public GameSessionService(GameSessionRepository gameSessionRepository,
                               PlayerRepository playerRepository,
                               GameProperties gameProperties,
-                              BasestationService basestationService) {
+                              BasestationService basestationService,
+                              BotManager botManager) {
         this.gameSessionRepository = gameSessionRepository;
         this.playerRepository = playerRepository;
         this.gameProperties = gameProperties;
         this.basestationService = basestationService;
+        this.botManager = botManager;
         this.secureRandom = new SecureRandom();
     }
 
@@ -70,7 +77,8 @@ public class GameSessionService {
                 hostPlayer.getDisplayName(),
                 hostPlayer.getSessionToken(),
                 true,
-                hostPlayer.isConnected()
+                hostPlayer.isConnected(),
+                hostPlayer.isBot()
         );
 
         return new CreateSessionResponse(
@@ -113,7 +121,8 @@ public class GameSessionService {
                 newPlayer.getDisplayName(),
                 newPlayer.getSessionToken(),
                 false,
-                newPlayer.isConnected()
+                newPlayer.isConnected(),
+                newPlayer.isBot()
         );
 
         SessionResponse sessionResponse = buildSessionResponse(session, players);
@@ -122,7 +131,7 @@ public class GameSessionService {
     }
 
     @Transactional
-    public SessionResponse startSession(String code, String token) {
+    public SessionResponse startSession(String code, String token, int durationMinutes) {
         GameSession session = findSessionByCode(code);
 
         Player player = playerRepository.findBySessionToken(token)
@@ -141,12 +150,23 @@ public class GameSessionService {
             throw new InvalidStateException("Not enough players to start (minimum " + gameProperties.getPlayers().getMin() + ")");
         }
 
+        // Validate and set game duration (1-5 minutes)
+        int clampedDuration = Math.max(1, Math.min(5, durationMinutes));
+        session.setGameDurationMinutes(clampedDuration);
+
         session.setState(GameSessionState.ACTIVE);
         session.setStartedAt(LocalDateTime.now());
         session = gameSessionRepository.save(session);
 
         // Assign basestations to all players
         basestationService.assignBasestations(session.getId());
+
+        // Provision bot player pods (non-blocking — failure does not prevent game start)
+        try {
+            botManager.provisionBots(code);
+        } catch (Exception e) {
+            log.error("Failed to provision bot pods for session {}: {}", code, e.getMessage(), e);
+        }
 
         return buildSessionResponse(session, players);
     }
@@ -162,6 +182,13 @@ public class GameSessionService {
         session.setState(GameSessionState.COMPLETED);
         session.setEndedAt(LocalDateTime.now());
         session = gameSessionRepository.save(session);
+
+        // Cleanup bot pods as fallback in case they did not self-terminate
+        try {
+            botManager.cleanupBots(code);
+        } catch (Exception e) {
+            log.error("Failed to cleanup bot pods for session {}: {}", code, e.getMessage(), e);
+        }
 
         List<Player> players = playerRepository.findBySessionId(session.getId());
         return buildSessionResponse(session, players);
@@ -191,7 +218,8 @@ public class GameSessionService {
                         p.getDisplayName(),
                         null, // Don't expose tokens in session responses
                         p.getId().equals(session.getHostPlayerId()),
-                        p.isConnected()
+                        p.isConnected(),
+                        p.isBot()
                 ))
                 .toList();
 
@@ -204,7 +232,7 @@ public class GameSessionService {
                 session.getEndedAt(),
                 playerDtos,
                 session.getCurrentTick(),
-                gameProperties.getTick().getTotal()
+                session.getTotalTicks()
         );
     }
 

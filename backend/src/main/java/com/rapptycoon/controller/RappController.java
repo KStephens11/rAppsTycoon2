@@ -2,6 +2,7 @@ package com.rapptycoon.controller;
 
 import com.rapptycoon.dto.DeployRequest;
 import com.rapptycoon.dto.DeploymentResponse;
+import com.rapptycoon.dto.DeploymentWrapperResponse;
 import com.rapptycoon.dto.TuneRequest;
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.service.RappService;
@@ -21,44 +22,44 @@ public class RappController {
     }
 
     @PostMapping("/deploy")
-    public ResponseEntity<DeploymentResponse> deploy(
+    public ResponseEntity<DeploymentWrapperResponse> deploy(
             @PathVariable String code,
             @RequestHeader(value = "X-Session-Token", required = false) String token,
             @Valid @RequestBody DeployRequest request) {
         validateToken(token);
         DeploymentResponse response = rappService.deploy(code, token, request.templateId(), request.basestationId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new DeploymentWrapperResponse(response));
     }
 
     @PutMapping("/{id}/tune")
-    public ResponseEntity<DeploymentResponse> tune(
+    public ResponseEntity<DeploymentWrapperResponse> tune(
             @PathVariable String code,
             @PathVariable Long id,
             @RequestHeader(value = "X-Session-Token", required = false) String token,
             @Valid @RequestBody TuneRequest request) {
         validateToken(token);
         DeploymentResponse response = rappService.tune(code, token, id, request.threshold(), request.aggressiveness());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new DeploymentWrapperResponse(response));
     }
 
     @PutMapping("/{id}/disable")
-    public ResponseEntity<DeploymentResponse> disable(
+    public ResponseEntity<DeploymentWrapperResponse> disable(
             @PathVariable String code,
             @PathVariable Long id,
             @RequestHeader(value = "X-Session-Token", required = false) String token) {
         validateToken(token);
         DeploymentResponse response = rappService.disable(code, token, id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new DeploymentWrapperResponse(response));
     }
 
     @PutMapping("/{id}/rollback")
-    public ResponseEntity<DeploymentResponse> rollback(
+    public ResponseEntity<DeploymentWrapperResponse> rollback(
             @PathVariable String code,
             @PathVariable Long id,
             @RequestHeader(value = "X-Session-Token", required = false) String token) {
         validateToken(token);
         DeploymentResponse response = rappService.rollback(code, token, id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new DeploymentWrapperResponse(response));
     }
 
     private void validateToken(String token) {

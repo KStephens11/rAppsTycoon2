@@ -7,5 +7,6 @@ public record LeaderboardEntryDto(
         Long playerId,
         String displayName,
         ScoreDto scores,
-        BigDecimal compositeScore
+        BigDecimal compositeScore,
+        boolean isBot
 ) {}

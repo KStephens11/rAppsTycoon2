@@ -32,14 +32,14 @@ public class LeaderboardController {
     public ResponseEntity<LeaderboardResponse> getLeaderboard(
             @PathVariable String code,
             @RequestHeader(value = "X-Session-Token", required = false) String token) {
+        GameSession session = gameSessionRepository.findBySessionCode(code)
+                .orElseThrow(() -> new SessionNotFoundException(code));
+
         if (token == null || token.isBlank()) {
             throw new UnauthorizedException("Missing session token");
         }
 
         Player player = playerService.validateToken(token);
-
-        GameSession session = gameSessionRepository.findBySessionCode(code)
-                .orElseThrow(() -> new SessionNotFoundException(code));
 
         if (!player.getSessionId().equals(session.getId())) {
             throw new ForbiddenException("Player is not a member of this session");

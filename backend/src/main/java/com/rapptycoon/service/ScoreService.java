@@ -162,7 +162,8 @@ public class ScoreService {
                     p.getId(),
                     p.getDisplayName(),
                     scores,
-                    p.getCompositeScore()
+                    p.getCompositeScore(),
+                    p.isBot()
             ));
         }
 

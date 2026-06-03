@@ -42,18 +42,20 @@ class GameSessionServiceTest {
     @Mock
     private BasestationService basestationService;
 
-    private GameProperties gameProperties;
+    @Mock
+    private BotManager botManager;
+
     private GameSessionService gameSessionService;
 
     @BeforeEach
     void setUp() {
-        gameProperties = new GameProperties();
+        GameProperties gameProperties = new GameProperties();
         GameProperties.Players players = new GameProperties.Players();
         players.setMin(2);
         players.setMax(6);
         gameProperties.setPlayers(players);
 
-        gameSessionService = new GameSessionService(gameSessionRepository, playerRepository, gameProperties, basestationService);
+        gameSessionService = new GameSessionService(gameSessionRepository, playerRepository, gameProperties, basestationService, botManager);
     }
 
     @Nested
@@ -320,7 +322,7 @@ class GameSessionServiceTest {
             when(playerRepository.findBySessionId(1L)).thenReturn(List.of(hostPlayer, otherPlayer));
             when(gameSessionRepository.save(any(GameSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            SessionResponse response = gameSessionService.startSession("ABCD1234", "hosttoken123");
+            SessionResponse response = gameSessionService.startSession("ABCD1234", "hosttoken123", 5);
 
             assertThat(response.state()).isEqualTo("ACTIVE");
         }
@@ -358,7 +360,7 @@ class GameSessionServiceTest {
             when(playerRepository.findBySessionId(1L)).thenReturn(List.of(hostPlayer, otherPlayer));
             when(gameSessionRepository.save(any(GameSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            SessionResponse response = gameSessionService.startSession("ABCD1234", "hosttoken123");
+            SessionResponse response = gameSessionService.startSession("ABCD1234", "hosttoken123", 5);
 
             assertThat(response.startedAt()).isNotNull();
         }
@@ -376,7 +378,7 @@ class GameSessionServiceTest {
             when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
             when(playerRepository.findBySessionToken("invalidtoken")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "invalidtoken"))
+            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "invalidtoken", 5))
                     .isInstanceOf(UnauthorizedException.class);
         }
 
@@ -401,7 +403,7 @@ class GameSessionServiceTest {
             when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
             when(playerRepository.findBySessionToken("nonhosttoken")).thenReturn(Optional.of(nonHostPlayer));
 
-            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "nonhosttoken"))
+            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "nonhosttoken", 5))
                     .isInstanceOf(ForbiddenException.class);
         }
 
@@ -426,7 +428,7 @@ class GameSessionServiceTest {
             when(gameSessionRepository.findBySessionCode("ABCD1234")).thenReturn(Optional.of(session));
             when(playerRepository.findBySessionToken("hosttoken123")).thenReturn(Optional.of(hostPlayer));
 
-            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "hosttoken123"))
+            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "hosttoken123", 5))
                     .isInstanceOf(InvalidStateException.class);
         }
 
@@ -452,7 +454,7 @@ class GameSessionServiceTest {
             when(playerRepository.findBySessionToken("hosttoken123")).thenReturn(Optional.of(hostPlayer));
             when(playerRepository.findBySessionId(1L)).thenReturn(List.of(hostPlayer));
 
-            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "hosttoken123"))
+            assertThatThrownBy(() -> gameSessionService.startSession("ABCD1234", "hosttoken123", 5))
                     .isInstanceOf(InvalidStateException.class);
         }
     }
