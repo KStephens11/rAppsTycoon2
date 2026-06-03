@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, memo } from 'react';
 import { Radio } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useWebSocket } from '../hooks';
@@ -20,10 +20,7 @@ import { apiGet, apiPost, apiPut } from '../services/api';
 import { BasestationsSkeleton, LeaderboardSkeleton } from '../components/ui';
 import { DragProvider, useDrag } from '../context/DragContext';
 import { DragPreview } from '../components/game/DragPreview';
-import { BasestationPopover } from '../components/game/BasestationPopover';
 import { Confetti } from '../components/Confetti';
-
-const IsometricMap = lazy(() => import('../components/game/IsometricMap'));
 
 const MemoizedEventPanel = memo(EventPanel);
 const MemoizedLeaderboard = memo(Leaderboard);
@@ -97,12 +94,9 @@ function GamePageInner() {
   const ws = useWebSocket();
   const realTimeState = useGameState();
   const { playDeploy, playEventAlert, playGameEnd } = useSoundEffects();
-  const { dragState, endDrag } = useDrag();
-  const [selectedBasestationId, setSelectedBasestationId] = useState<number | null>(null);
+  const { dragState } = useDrag();
   const [basestations, setBasestations] = useState<BasestationApiData[]>([]);
   const [basestationsLoading, setBasestationsLoading] = useState(true);
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [popoverAnchor, setPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const [rapps, setRapps] = useState<RappTemplate[]>([]);
   const [currentTick, setCurrentTick] = useState(0);
   const [totalTicks, setTotalTicks] = useState(60);
@@ -117,7 +111,7 @@ function GamePageInner() {
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const [resolvedBasestationIds, setResolvedBasestationIds] = useState<Set<number>>(new Set());
+  const [, setResolvedBasestationIds] = useState<Set<number>>(new Set());
   const [showResolutionCelebration, setShowResolutionCelebration] = useState(false);
   const postActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousEventIdsRef = useRef<Map<number, Set<number>>>(new Map());
@@ -260,19 +254,6 @@ function GamePageInner() {
 
   useEffect(() => { fetchCatalogue(); }, [fetchCatalogue]);
 
-  const handleSelectBasestation = useCallback((id: number | null) => {
-    setSelectedBasestationId(id);
-  }, []);
-
-  const handleScreenPositionUpdate = useCallback((position: { x: number; y: number } | null) => {
-    setPopoverAnchor(position);
-  }, []);
-
-  const selectedBasestation = useMemo(() => {
-    if (!selectedBasestationId) return null;
-    return basestations.find((bs) => bs.id === selectedBasestationId) ?? null;
-  }, [selectedBasestationId, basestations]);
-
   const handleConfirmDeploy = useCallback(async (templateId: number, basestationId: number) => {
     if (!sessionCode || !token) return;
     await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
@@ -281,92 +262,12 @@ function GamePageInner() {
     fetchBasestationsAfterAction();
   }, [sessionCode, token, addToast, fetchBasestationsAfterAction, playDeploy]);
 
-  const handleDrop = useCallback(async (basestationId: number) => {
-    if (!dragState || !sessionCode || !token || isDeploying) return;
-    const { templateId } = dragState;
-    setIsDeploying(true);
-    try {
-      await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
-      addToast('rApp deployed successfully!', 'success');
-      playDeploy();
-      fetchBasestationsAfterAction();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to deploy rApp', 'error');
-    } finally {
-      endDrag();
-      setIsDeploying(false);
-    }
-  }, [dragState, sessionCode, token, isDeploying, addToast, playDeploy, fetchBasestations, endDrag]);
-
-  const handleTune = useCallback((rappId: number, rappName: string, threshold?: number, aggressiveness?: string) => {
-    setTuneTarget({ id: rappId, name: rappName, threshold, aggressiveness });
-    setTuneModalOpen(true);
-  }, []);
-
   const handleConfirmTune = useCallback(async (rappId: number, threshold: number, aggressiveness: string) => {
     if (!sessionCode || !token) return;
     await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/tune`, { threshold, aggressiveness }, token);
     addToast('rApp tuned successfully!', 'success');
     fetchBasestationsAfterAction();
   }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
-
-  const handleDisable = useCallback(async (rappId: number) => {
-    if (!sessionCode || !token) return;
-    try {
-      await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, undefined, token);
-      addToast('rApp disabled', 'info');
-      fetchBasestationsAfterAction();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to disable rApp', 'error');
-    }
-  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
-
-  const handleRollback = useCallback(async (rappId: number) => {
-    if (!sessionCode || !token) return;
-    try {
-      await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, undefined, token);
-      addToast('rApp rolled back to previous version', 'success');
-      fetchBasestationsAfterAction();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to rollback rApp', 'error');
-    }
-  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
-
-  const mergedBasestations = useMemo(() => basestations.map((bs) => {
-    const rtState = realTimeState.basestations.find((rt) => rt.id === bs.id);
-    const activeRapps = realTimeState.rappDeployments.filter(
-      (r) => r.basestationId === bs.id && r.newStatus === 'ACTIVE',
-    );
-    const restActiveCount = bs.deployedRapps.filter((r) => r.status === 'ACTIVE').length;
-    const restDeploymentIds = new Set(bs.deployedRapps.map((r) => r.id));
-    const newRtDeployments = activeRapps.filter((r) => !restDeploymentIds.has(r.deploymentId));
-    const totalActiveRapps = restActiveCount + newRtDeployments.length;
-
-    const severityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-    const allSeverities = [
-      ...bs.activeEvents.map((e) => e.severity),
-      ...realTimeState.events.filter((e) => e.basestationId === bs.id).map((e) => e.severity),
-    ];
-    const highestSeverity = allSeverities.length > 0
-      ? allSeverities.reduce((highest, current) =>
-          (severityOrder[current] || 0) > (severityOrder[highest] || 0) ? current : highest,
-        ) as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-      : undefined;
-
-    const highestEscalation = bs.activeEvents.length > 0
-      ? Math.max(...bs.activeEvents.map((e) => e.escalationLevel))
-      : 0;
-
-    return {
-      ...bs,
-      metrics: rtState ? rtState.metrics : bs.metrics,
-      activeRappsCount: totalActiveRapps,
-      hasEvent: bs.activeEvents.length > 0 || realTimeState.events.some((e) => e.basestationId === bs.id),
-      highestSeverity,
-      highestEscalation,
-      showResolution: resolvedBasestationIds.has(bs.id),
-    };
-  }), [basestations, realTimeState.basestations, realTimeState.rappDeployments, realTimeState.events, resolvedBasestationIds]);
 
   const combinedActiveEvents: ActiveEvent[] = useMemo(() => {
     const restEvents: ActiveEvent[] = basestations.flatMap((bs) =>
@@ -463,27 +364,11 @@ function GamePageInner() {
             <LegendDot color="bg-red-500" label="Critical" />
           </div>
 
-          <Suspense fallback={<BasestationsSkeleton />}>
-            <IsometricMap
-              basestations={mergedBasestations}
-              selectedBasestationId={selectedBasestationId}
-              onSelectBasestation={handleSelectBasestation}
-              onDrop={isDeploying ? undefined : handleDrop}
-              onScreenPositionUpdate={handleScreenPositionUpdate}
-            />
-          </Suspense>
+          {/* Map placeholder — to be rebuilt */}
+          <div className="w-full h-full flex items-center justify-center bg-surface-light/30">
+            <p className="text-text-muted text-sm">Map area</p>
+          </div>
           {basestationsLoading && <BasestationsSkeleton />}
-
-          {selectedBasestation && popoverAnchor && (
-            <BasestationPopover
-              basestation={selectedBasestation}
-              anchorPosition={popoverAnchor}
-              onClose={() => setSelectedBasestationId(null)}
-              onTune={handleTune}
-              onDisable={handleDisable}
-              onRollback={handleRollback}
-            />
-          )}
         </div>
 
         {/* Right panel — Active Events */}
