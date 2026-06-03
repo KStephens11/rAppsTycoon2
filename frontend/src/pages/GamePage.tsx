@@ -396,7 +396,6 @@ function GamePageInner() {
   return (
     <div className="flex flex-col h-full relative">
       {/* Overlays (unchanged) */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <EventAlertContainer alerts={eventAlerts} onDismiss={dismissEventAlert} />
       <DragPreview />
 
@@ -437,6 +436,11 @@ function GamePageInner() {
 
         {/* Center — Map (full width, overlays float on top) */}
         <div className="flex-1 relative min-w-0 min-h-0">
+          {/* Toast notifications — inside map area */}
+          <div className="absolute bottom-3 right-3 z-20">
+            <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+          </div>
+
           {/* Floating Leaderboard — top left */}
           <div className="absolute top-3 left-3 z-10 w-52 hidden md:block bg-surface/80 backdrop-blur-sm border border-surface-lighter/50 rounded-lg shadow-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-surface-lighter/50">
