@@ -90,11 +90,17 @@ public class InternalEventController {
                                     .toList())
                             .toList();
 
+                    // Map basestation ID → name
+                    java.util.Map<Long, String> basestationNames = players.stream()
+                            .flatMap(player -> basestationRepository.findByPlayerId(player.getId()).stream())
+                            .collect(java.util.stream.Collectors.toMap(Basestation::getId, Basestation::getName));
+
                     return new ActiveSessionDto(
                             session.getSessionCode(),
                             playerCount,
                             basestationIds,
                             basestationIdsByPlayer,
+                            basestationNames,
                             session.getStartedAt()
                     );
                 })
