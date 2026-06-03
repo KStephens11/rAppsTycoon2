@@ -7,6 +7,7 @@ import com.rapptycoon.repository.BasestationRepository;
 import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
 import com.rapptycoon.repository.RappDeploymentRepository;
+import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,17 +32,20 @@ public class BasestationService {
     private final PlayerRepository playerRepository;
     private final RappDeploymentRepository rappDeploymentRepository;
     private final GameEventRepository gameEventRepository;
+    private final RappTemplateRepository rappTemplateRepository;
     private final GameProperties gameProperties;
 
     public BasestationService(BasestationRepository basestationRepository,
                               PlayerRepository playerRepository,
                               RappDeploymentRepository rappDeploymentRepository,
                               GameEventRepository gameEventRepository,
+                              RappTemplateRepository rappTemplateRepository,
                               GameProperties gameProperties) {
         this.basestationRepository = basestationRepository;
         this.playerRepository = playerRepository;
         this.rappDeploymentRepository = rappDeploymentRepository;
         this.gameEventRepository = gameEventRepository;
+        this.rappTemplateRepository = rappTemplateRepository;
         this.gameProperties = gameProperties;
     }
 
@@ -113,13 +117,19 @@ public class BasestationService {
                     List<GameEvent> events = gameEventRepository.findByBasestationIdAndResolvedFalse(bs.getId());
 
                     List<DeployedRappDto> deployedRapps = deployments.stream()
-                            .map(d -> new DeployedRappDto(
+                            .map(d -> {
+                                String rappName = rappTemplateRepository.findById(d.getTemplateId())
+                                        .map(RappTemplate::getName)
+                                        .orElse("Unknown rApp");
+                                return new DeployedRappDto(
                                     d.getId(),
                                     d.getTemplateId(),
+                                    rappName,
                                     d.getStatus().name(),
                                     d.getVersion(),
                                     d.getDeployedAt()
-                            ))
+                                );
+                            })
                             .toList();
 
                     List<ActiveEventDto> activeEvents = events.stream()

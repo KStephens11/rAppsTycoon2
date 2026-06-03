@@ -7,6 +7,7 @@ import com.rapptycoon.repository.BasestationRepository;
 import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
 import com.rapptycoon.repository.RappDeploymentRepository;
+import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,9 @@ class BasestationServiceTest {
     @Mock
     private GameEventRepository gameEventRepository;
 
+    @Mock
+    private RappTemplateRepository rappTemplateRepository;
+
     private GameProperties gameProperties;
 
     private BasestationService basestationService;
@@ -58,6 +62,7 @@ class BasestationServiceTest {
                 playerRepository,
                 rappDeploymentRepository,
                 gameEventRepository,
+                rappTemplateRepository,
                 gameProperties
         );
     }
