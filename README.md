@@ -92,6 +92,7 @@ kubectl apply -f k8s/backend-service.yaml
 kubectl apply -f k8s/event-generator-deployment.yaml
 kubectl apply -f k8s/frontend-deployment.yaml
 kubectl apply -f k8s/frontend-service.yaml
+kubectl apply -f k8s/frontend-hpa.yaml
 ```
 
 Verify all pods are running:
