@@ -554,37 +554,41 @@ export function GameMap({ basestations, onSelectBasestation, onDropDeploy, dragS
       const visibleTop = (-H / 2 - cam.y) / cam.zoom;
       const visibleBottom = (H / 2 - cam.y) / cam.zoom;
       
-      const gridPadding = 500;
+      const gridPadding = 300;
       
       ctx.strokeStyle = 'rgba(60, 80, 120, 0.12)';
       ctx.lineWidth = 0.5;
       
       // Estimate which grid cells might be visible
-      // Convert screen bounds to approximate grid coordinates
-      const minCol = Math.floor((visibleLeft - gridPadding) / (TW / 2)) - 30;
-      const maxCol = Math.ceil((visibleRight + gridPadding) / (TW / 2)) + 30;
-      const minRow = Math.floor((visibleTop - gridPadding) / (TH / 2)) - 60;
-      const maxRow = Math.ceil((visibleBottom + gridPadding) / (TH / 2)) + 60;
+      // Reduce range for better performance
+      const minCol = Math.floor((visibleLeft - gridPadding) / (TW / 2)) - 10;
+      const maxCol = Math.ceil((visibleRight + gridPadding) / (TW / 2)) + 10;
+      const minRow = Math.floor((visibleTop - gridPadding) / (TH / 2)) - 20;
+      const maxRow = Math.ceil((visibleBottom + gridPadding) / (TH / 2)) + 20;
+      
+      // Batch all lines into a single path for better performance
+      const hw = TW / 2 - GAP;
+      const hh = TH / 2 - GAP * 0.5;
+      
+      ctx.beginPath();
       
       // Draw column lines (constant c, varying r)
       for (let c = minCol; c <= maxCol; c++) {
-        const [x1, y1] = iso(c, minRow, ox, oy);
-        const [x2, y2] = iso(c, maxRow, ox, oy);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        const [cx1, cy1] = iso(c, minRow, ox, oy);
+        const [cx2, cy2] = iso(c, maxRow, ox, oy);
+        ctx.moveTo(cx1 + hw, cy1 - hh);
+        ctx.lineTo(cx2 + hw, cy2 - hh);
       }
       
       // Draw row lines (constant r, varying c)
       for (let r = minRow; r <= maxRow; r++) {
-        const [x1, y1] = iso(minCol, r, ox, oy);
-        const [x2, y2] = iso(maxCol, r, ox, oy);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        const [cx1, cy1] = iso(minCol, r, ox, oy);
+        const [cx2, cy2] = iso(maxCol, r, ox, oy);
+        ctx.moveTo(cx1 - hw, cy1 - hh);
+        ctx.lineTo(cx2 - hw, cy2 - hh);
       }
+      
+      ctx.stroke();
 
       const stations = stationCells();
 
