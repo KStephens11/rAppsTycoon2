@@ -27,7 +27,9 @@ pipeline {
                     jacoco(
                         execPattern: '**/target/jacoco.exec',
                         classPattern: '**/target/classes',
-                        sourcePattern: '**/src/main/java'
+                        sourcePattern: '**/src/main/java',
+                        minimumLineCoverage: '60',
+                        minimumBranchCoverage: '60'
                     )
                     publishHTML(target: [
                         allowMissing: true,
