@@ -145,13 +145,26 @@ function RiskIndicator({ value, label }: { value: number; label: string }) {
 }
 
 /** Portaled dropdown for selecting a basestation to deploy to */
-function RappPickerDropdown({ rapp, basestations, onConfirmDeploy, onClose }: {
+function RappPickerDropdown({ rapp, basestations, onConfirmDeploy, onClose, anchorEl }: {
   rapp: RappTemplate;
   basestations: Array<{ id: number; name: string }>;
   onConfirmDeploy: (templateId: number, basestationId: number) => void;
   onClose: () => void;
+  anchorEl: HTMLElement | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+
+  // Position above the anchor element
+  useEffect(() => {
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setPos({
+        left: rect.left + rect.width / 2,
+        top: rect.top,
+      });
+    }
+  }, [anchorEl]);
 
   // Close on outside click
   useEffect(() => {
@@ -164,13 +177,13 @@ function RappPickerDropdown({ rapp, basestations, onConfirmDeploy, onClose }: {
     return () => { clearTimeout(timer); document.removeEventListener('mousedown', handleClick); };
   }, [onClose]);
 
-  // Position near the bottom center of the viewport (above the catalogue bar)
   return (
     <div
       ref={ref}
-      className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[9999] w-52 rounded-lg bg-surface border border-surface-lighter shadow-2xl p-3 space-y-1"
+      className="fixed z-[9999] w-48 rounded-lg bg-surface border border-surface-lighter shadow-2xl p-2 space-y-0.5"
+      style={{ left: pos.left, bottom: window.innerHeight - pos.top + 8, transform: 'translateX(-50%)' }}
     >
-      <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted px-2 py-1">
         Deploy {rapp.name} to:
       </p>
       {basestations.map((bs) => (
@@ -180,7 +193,7 @@ function RappPickerDropdown({ rapp, basestations, onConfirmDeploy, onClose }: {
             onConfirmDeploy(rapp.id, bs.id);
             onClose();
           }}
-          className="w-full text-left px-3 py-2 text-xs text-text rounded-md hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+          className="w-full text-left px-2 py-1.5 text-xs text-text rounded hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
         >
           {bs.name}
         </button>
@@ -280,6 +293,7 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
                 draggable
                 tabIndex={0}
                 role="button"
+                data-rapp-id={rapp.id}
                 aria-label={`Deploy ${rapp.name} - €${rapp.cost}`}
                 onDragStart={(e) => handleDragStart(e, rapp)}
                 onDragEnd={handleDragEnd}
@@ -328,6 +342,7 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
                   basestations={basestationsProp}
                   onConfirmDeploy={onConfirmDeploy}
                   onClose={() => setPickerOpenForId(null)}
+                  anchorEl={document.querySelector(`[data-rapp-id="${rapp.id}"]`)}
                 />,
                 document.body,
               )

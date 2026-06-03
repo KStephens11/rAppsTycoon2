@@ -19,37 +19,37 @@ function computeCoords(
   rect: DOMRect,
   side: NonNullable<TooltipProps['side']>,
 ): Coords {
+  const vw = window.innerWidth;
+  let left: number;
+  let top: number;
+
   switch (side) {
     case 'right':
-      return {
-        top:  rect.top + rect.height / 2,
-        left: rect.right + GAP,
-      };
+      top = rect.top + rect.height / 2;
+      left = rect.right + GAP;
+      break;
     case 'left':
-      return {
-        top:  rect.top + rect.height / 2,
-        left: rect.left - GAP - TOOLTIP_WIDTH,
-      };
+      top = rect.top + rect.height / 2;
+      left = rect.left - GAP - TOOLTIP_WIDTH;
+      break;
     case 'bottom':
-      return {
-        top:  rect.bottom + GAP,
-        left: rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2,
-      };
+      top = rect.bottom + GAP;
+      left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
+      break;
     case 'top':
     default:
-      return {
-        top:  rect.top - GAP,  // tooltip positioned via translateY(-100%)
-        left: rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2,
-      };
+      top = rect.top - GAP;
+      left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
+      break;
   }
-}
 
-const sideTransform: Record<NonNullable<TooltipProps['side']>, string> = {
-  top:    'translateY(-100%)',
-  bottom: 'translateY(0)',
-  right:  'translateY(-50%)',
-  left:   'translateY(-50%)',
-};
+  // Clamp horizontally so it doesn't overflow the viewport edges
+  const EDGE_PADDING = 8;
+  if (left < EDGE_PADDING) left = EDGE_PADDING;
+  if (left + TOOLTIP_WIDTH > vw - EDGE_PADDING) left = vw - EDGE_PADDING - TOOLTIP_WIDTH;
+
+  return { top, left };
+}
 
 const sideMotion = {
   top:    { initial: { opacity: 0, y: 4  }, animate: { opacity: 1, y: 0  } },
@@ -82,7 +82,13 @@ export function Tooltip({ content, children, className = '', side = 'top' }: Too
   }, [isVisible, updateCoords]);
 
   const motion_ = sideMotion[side];
-  const transform = sideTransform[side];
+
+  // For 'top' side, use bottom positioning so the tooltip grows upward
+  const positionStyle = side === 'top'
+    ? { bottom: window.innerHeight - coords.top, left: coords.left }
+    : side === 'right' || side === 'left'
+    ? { top: coords.top, left: coords.left, transform: 'translateY(-50%)' }
+    : { top: coords.top, left: coords.left };
 
   return (
     <div
@@ -97,7 +103,7 @@ export function Tooltip({ content, children, className = '', side = 'top' }: Too
           {isVisible && (
             <motion.div
               className="fixed z-[9999] w-64 rounded-lg bg-surface-lighter border border-surface-lighter/80 shadow-2xl pointer-events-none"
-              style={{ top: coords.top, left: coords.left, transform }}
+              style={positionStyle}
               initial={motion_.initial}
               animate={motion_.animate}
               exit={motion_.initial}

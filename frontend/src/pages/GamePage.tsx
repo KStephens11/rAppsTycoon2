@@ -496,14 +496,14 @@ function GamePageInner() {
       </div>
 
       {/* ── Bottom bar — rApp Catalogue (full width) ── */}
-      <div className="hidden md:flex h-28 border-t border-surface-lighter shrink-0 bg-surface overflow-visible">
-        <div className="flex flex-col w-full overflow-visible">
+      <div className="hidden md:flex h-28 border-t border-surface-lighter shrink-0 bg-surface">
+        <div className="flex flex-col w-full">
           <div className="px-4 py-1 shrink-0">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
               rApp Catalogue
             </h3>
           </div>
-          <div className="flex-1 overflow-x-auto overflow-y-visible px-4 py-1">
+          <div className="flex-1 px-4 py-1">
             <RappCatalogue
               basestations={basestations.map((bs) => ({ id: bs.id, name: bs.name }))}
               onConfirmDeploy={handleConfirmDeploy}
