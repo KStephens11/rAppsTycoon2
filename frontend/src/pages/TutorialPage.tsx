@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui';
+import { Tooltip } from '../components/ui';
+import { RappTooltipContent, type RappTemplate } from '../components/game/RappCatalogue';
 import {
   ChevronLeft,
   ChevronRight,
@@ -293,35 +295,105 @@ function BasestationsContent() {
   );
 }
 
-const RAPP_CATALOGUE = [
-  { name: 'Energy Saver', Icon: Zap, color: 'text-accent', cost: 30, desc: 'Cuts energy costs' },
-  { name: 'Capacity Optimiser', Icon: Maximize, color: 'text-primary', cost: 50, desc: 'Boosts customer exp.' },
-  { name: 'Fault Predictor', Icon: Shield, color: 'text-warning', cost: 45, desc: 'Prevents failures' },
-  { name: 'SLA Guardian', Icon: FileCheck, color: 'text-danger', cost: 55, desc: 'Maintains SLA' },
-  { name: 'Config Drift Detector', Icon: Settings, color: 'text-primary', cost: 40, desc: 'Fixes config drift' },
-  { name: 'Traffic Balancer', Icon: GitBranch, color: 'text-accent', cost: 60, desc: 'Balances load' },
-  { name: 'Alarm Noise Reducer', Icon: BellOff, color: 'text-text-muted', cost: 35, desc: 'Clears false alarms' },
+const RAPP_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  'Energy Saver': Zap,
+  'Capacity Optimiser': Maximize,
+  'Fault Predictor': Shield,
+  'SLA Guardian': FileCheck,
+  'Configuration Drift Detector': Settings,
+  'Traffic Balancer': GitBranch,
+  'Alarm Noise Reducer': BellOff,
+};
+
+const RAPP_COLORS: Record<string, string> = {
+  'Energy Saver': 'text-accent',
+  'Capacity Optimiser': 'text-primary',
+  'Fault Predictor': 'text-warning',
+  'SLA Guardian': 'text-danger',
+  'Configuration Drift Detector': 'text-primary',
+  'Traffic Balancer': 'text-accent',
+  'Alarm Noise Reducer': 'text-text-muted',
+};
+
+const noImpact = { health: 0, customerExperience: 0, cost: 0, energyEfficiency: 0, automationReliability: 0, slaCompliance: 0 };
+
+const RAPP_CATALOGUE: RappTemplate[] = [
+  {
+    id: 1, name: 'Energy Saver', cost: 30, risk: 15, confidence: 88,
+    purpose: 'Reduces energy consumption by dynamically scaling down unused capacity and optimising power modes during low-traffic periods.',
+    benefit: 'Lowers energy costs and improves energy efficiency',
+    sideEffects: 'May slightly reduce throughput during aggressive power-saving cycles.',
+    impact: { ...noImpact, energyEfficiency: 12, cost: -8 },
+  },
+  {
+    id: 2, name: 'Capacity Optimiser', cost: 50, risk: 25, confidence: 82,
+    purpose: 'Dynamically allocates additional radio resources to high-demand cells, boosting throughput and reducing congestion.',
+    benefit: 'Improves customer experience and reduces traffic congestion',
+    sideEffects: 'Increases energy consumption as a side effect.',
+    impact: { ...noImpact, customerExperience: 15, energyEfficiency: -6 },
+  },
+  {
+    id: 3, name: 'Fault Predictor', cost: 45, risk: 10, confidence: 79,
+    purpose: 'Uses ML-based anomaly detection to identify early warning signs of hardware failures before they cause outages.',
+    benefit: 'Prevents hardware failures and improves automation reliability',
+    sideEffects: '',
+    impact: { ...noImpact, health: 8, automationReliability: 10 },
+  },
+  {
+    id: 4, name: 'SLA Guardian', cost: 55, risk: 20, confidence: 85,
+    purpose: 'Monitors and enforces service level agreements in real time, rerouting traffic and adjusting parameters to maintain compliance.',
+    benefit: 'Maintains SLA compliance and customer experience during incidents',
+    sideEffects: 'May introduce minor latency overhead due to constant SLA monitoring.',
+    impact: { ...noImpact, slaCompliance: 18, customerExperience: 5 },
+  },
+  {
+    id: 5, name: 'Configuration Drift Detector', cost: 40, risk: 8, confidence: 91,
+    purpose: 'Continuously monitors rApp configurations and network settings for unintended changes, triggering alerts or auto-corrections.',
+    benefit: 'Prevents configuration conflicts and maintains automation reliability',
+    sideEffects: '',
+    impact: { ...noImpact, automationReliability: 12 },
+  },
+  {
+    id: 6, name: 'Traffic Balancer', cost: 60, risk: 30, confidence: 76,
+    purpose: 'Redistributes network load across underutilised basestations to prevent single-cell overload and improve overall stability.',
+    benefit: 'Reduces congestion and improves health during traffic spikes',
+    sideEffects: 'Increased handover frequency may temporarily affect customer experience.',
+    impact: { ...noImpact, health: 10, customerExperience: -4 },
+  },
+  {
+    id: 7, name: 'Alarm Noise Reducer', cost: 35, risk: 12, confidence: 84,
+    purpose: 'Applies ML filtering to suppress false-positive alerts, letting you focus on genuine incidents that require action.',
+    benefit: 'Clears alert noise and improves automation reliability',
+    sideEffects: 'Small risk of suppressing genuinely important low-severity alerts.',
+    impact: { ...noImpact, automationReliability: 8 },
+  },
 ];
 
 function RappCatalogueContent() {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2">
-        {RAPP_CATALOGUE.map(({ name, Icon, color, cost, desc }) => (
-          <div key={name} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-surface-lighter bg-surface">
-            <div className={`shrink-0 ${color}`}>
-              <Icon size={16} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-text truncate">{name}</p>
-              <p className="text-[10px] text-text-muted">{desc} · €{cost}</p>
-            </div>
-          </div>
-        ))}
+        {RAPP_CATALOGUE.map((rapp) => {
+          const Icon = RAPP_ICONS[rapp.name] ?? Settings;
+          const color = RAPP_COLORS[rapp.name] ?? 'text-text-muted';
+          return (
+            <Tooltip key={rapp.id} content={<RappTooltipContent rapp={rapp} />} side="top">
+              <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-surface-lighter bg-surface cursor-default hover:border-primary/30 transition-colors">
+                <div className={`shrink-0 ${color}`}>
+                  <Icon size={16} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-text truncate">{rapp.name}</p>
+                  <p className="text-[10px] text-text-muted">€{rapp.cost}</p>
+                </div>
+              </div>
+            </Tooltip>
+          );
+        })}
       </div>
       <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
         <p className="text-xs text-text-muted leading-relaxed">
-          <span className="text-primary font-medium">7 rApp types</span> available. Drag from the left catalogue onto any basestation on the map — or click to pick a target.
+          <span className="text-primary font-medium">7 rApp types</span> available. Hover each card to learn more. In-game, drag from the left catalogue onto any basestation.
         </p>
       </div>
     </div>

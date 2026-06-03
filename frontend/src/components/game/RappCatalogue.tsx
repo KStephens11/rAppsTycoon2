@@ -14,10 +14,10 @@ import {
 import { useGame } from '../../context/GameContext';
 import { useDrag } from '../../context/DragContext';
 import { apiGet } from '../../services/api';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
-import { CatalogueSkeleton } from '../ui/Skeleton';
-import { Tooltip } from '../ui/Tooltip';
+import { Badge } from '../ui';
+import { Button } from '../ui';
+import { CatalogueSkeleton } from '../ui';
+import { Tooltip } from '../ui';
 import { DeploymentPicker } from './DeploymentPicker';
 
 export interface RappTemplate {
@@ -95,7 +95,7 @@ const rappHelpfulWhen: Record<string, string[]> = {
   ],
 };
 
-function RappTooltipContent({ rapp }: { rapp: RappTemplate }) {
+export function RappTooltipContent({ rapp }: { rapp: RappTemplate }) {
   const situations = rappHelpfulWhen[rapp.name] ?? [];
   return (
     <div className="p-3 space-y-2.5">
