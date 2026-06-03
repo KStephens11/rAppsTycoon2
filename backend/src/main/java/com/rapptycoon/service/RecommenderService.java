@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -25,7 +27,6 @@ public class RecommenderService {
 
     private static final Logger log = LoggerFactory.getLogger(RecommenderService.class);
     private static final int PROCESS_TIMEOUT_SECONDS = 10;
-    private static final int MAX_RECOMMENDATIONS = 5;
 
     private final GameSessionRepository gameSessionRepository;
     private final PlayerService playerService;
@@ -56,10 +57,10 @@ public class RecommenderService {
      *
      * @param sessionCode the session code
      * @param token       the player's session token
-     * @return up to 5 ranked recommendations
+     * @return the top-ranked recommendation or null
      */
     @Transactional(readOnly = true)
-    public RecommendationsResponse getRecommendations(String sessionCode, String token) {
+    public RecommendationResponse getRecommendations(String sessionCode, String token) {
         // Validate token and get player
         Player player = playerService.validateToken(token);
 
@@ -81,9 +82,9 @@ public class RecommenderService {
         Map<String, Object> gameState = buildGameState(player);
 
         // Invoke Python strategy module
-        List<RecommendationDto> recommendations = invokeStrategyModule(gameState);
+        RecommendationDto recommendation = invokeStrategyModule(gameState);
 
-        return new RecommendationsResponse(recommendations);
+        return new RecommendationResponse(recommendation);
     }
 
     private Map<String, Object> buildGameState(Player player) {
@@ -165,7 +166,7 @@ public class RecommenderService {
         return map;
     }
 
-    private List<RecommendationDto> invokeStrategyModule(Map<String, Object> gameState) {
+    private RecommendationDto invokeStrategyModule(Map<String, Object> gameState) {
         try {
             String jsonInput = objectMapper.writeValueAsString(gameState);
 
@@ -185,21 +186,21 @@ public class RecommenderService {
             if (!finished) {
                 process.destroyForcibly();
                 log.error("Python recommender process timed out after {} seconds", PROCESS_TIMEOUT_SECONDS);
-                return Collections.emptyList();
+                return null;
             }
 
             int exitCode = process.exitValue();
             if (exitCode != 0) {
                 String stderr = readStream(process.getErrorStream());
                 log.error("Python recommender process failed with exit code {}: {}", exitCode, stderr);
-                return Collections.emptyList();
+                return null;
             }
 
             // Read stdout
             String output = readStream(process.getInputStream());
             if (output.isBlank()) {
                 log.warn("Python recommender returned empty output");
-                return Collections.emptyList();
+                return null;
             }
 
             // Parse output
@@ -208,21 +209,21 @@ public class RecommenderService {
             List<Map<String, Object>> recs = (List<Map<String, Object>>) result.get("recommendations");
 
             if (recs == null) {
-                return Collections.emptyList();
+                return null;
             }
 
             return recs.stream()
-                    .limit(MAX_RECOMMENDATIONS)
+                    .findFirst()
                     .map(this::mapToRecommendationDto)
-                    .toList();
+                    .orElse(null);
 
         } catch (IOException e) {
             log.error("Failed to invoke Python recommender: {}", e.getMessage(), e);
-            return Collections.emptyList();
+            return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Python recommender invocation interrupted", e);
-            return Collections.emptyList();
+            return null;
         }
     }
 
