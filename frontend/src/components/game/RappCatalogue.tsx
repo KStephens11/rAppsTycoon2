@@ -19,7 +19,6 @@ import { Badge } from '../ui';
 import { Button } from '../ui';
 import { CatalogueSkeleton } from '../ui';
 import { Tooltip } from '../ui';
-import { DeploymentPicker } from './DeploymentPicker';
 
 export interface RappTemplate {
   id: number;
