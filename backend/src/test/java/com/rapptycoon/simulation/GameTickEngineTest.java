@@ -8,6 +8,8 @@ import com.rapptycoon.repository.*;
 import com.rapptycoon.service.BasestationService;
 import com.rapptycoon.service.EventService;
 import com.rapptycoon.service.GameSessionService;
+import com.rapptycoon.service.InProcessBotPlayer;
+import com.rapptycoon.service.RappService;
 import com.rapptycoon.service.ScoreService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,6 +61,10 @@ class GameTickEngineTest {
     private GameProperties gameProperties;
     @Mock
     private com.rapptycoon.websocket.WebSocketBroadcaster broadcaster;
+    @Mock
+    private RappService rappService;
+    @Mock
+    private InProcessBotPlayer inProcessBotPlayer;
 
     @InjectMocks
     private GameTickEngine gameTickEngine;
@@ -585,5 +591,59 @@ class GameTickEngineTest {
         assertThat(gameTickEngine.shouldEscalate(EventSeverity.CRITICAL, 0)).isTrue();
         assertThat(gameTickEngine.shouldEscalate(EventSeverity.CRITICAL, 1)).isTrue();
         assertThat(gameTickEngine.shouldEscalate(EventSeverity.CRITICAL, 99)).isTrue();
+    }
+
+    @Test
+    @DisplayName("processTick: executes bot actions after score recalculation")
+    void processTick_executesBotActions() {
+        GameSession session = createActiveSession(5);
+        Player player = createPlayer(1L, 1L);
+        Basestation bs = createBasestation(1L, 1L);
+
+        when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player));
+        when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+        when(rappDeploymentRepository.findByBasestationIdAndStatus(1L, DeploymentStatus.DEPLOYING))
+                .thenReturn(Collections.emptyList());
+        when(rappDeploymentRepository.findByBasestationIdAndStatus(1L, DeploymentStatus.ACTIVE))
+                .thenReturn(Collections.emptyList());
+        when(eventService.getUnresolvedEvents(1L)).thenReturn(Collections.emptyList());
+        when(eventService.checkEventResolution(1L)).thenReturn(Collections.emptyList());
+        when(gameProperties.getTick()).thenReturn(tickProps);
+        when(gameProperties.getEscalation()).thenReturn(escalationProps);
+        when(gameSessionRepository.save(any(GameSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        gameTickEngine.processTick(session);
+
+        verify(inProcessBotPlayer).executeBotActions(1L, "ABCD1234");
+    }
+
+    @Test
+    @DisplayName("processTick: continues processing if bot actions throw exception")
+    void processTick_continuesWhenBotActionsThrow() {
+        GameSession session = createActiveSession(5);
+        Player player = createPlayer(1L, 1L);
+        Basestation bs = createBasestation(1L, 1L);
+
+        when(playerRepository.findBySessionId(1L)).thenReturn(List.of(player));
+        when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+        when(rappDeploymentRepository.findByBasestationIdAndStatus(1L, DeploymentStatus.DEPLOYING))
+                .thenReturn(Collections.emptyList());
+        when(rappDeploymentRepository.findByBasestationIdAndStatus(1L, DeploymentStatus.ACTIVE))
+                .thenReturn(Collections.emptyList());
+        when(eventService.getUnresolvedEvents(1L)).thenReturn(Collections.emptyList());
+        when(eventService.checkEventResolution(1L)).thenReturn(Collections.emptyList());
+        when(gameProperties.getTick()).thenReturn(tickProps);
+        when(gameProperties.getEscalation()).thenReturn(escalationProps);
+        when(gameSessionRepository.save(any(GameSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Bot player throws an exception
+        doThrow(new RuntimeException("Bot error")).when(inProcessBotPlayer)
+                .executeBotActions(anyLong(), anyString());
+
+        gameTickEngine.processTick(session);
+
+        // Tick should still be incremented (processing continues after bot error)
+        assertThat(session.getCurrentTick()).isEqualTo(6);
+        verify(gameSessionRepository).save(session);
     }
 }
