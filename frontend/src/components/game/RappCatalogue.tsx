@@ -288,6 +288,7 @@ export function RappCatalogue({ onDeploy, basestations: basestationsProp, onConf
               content={<RappTooltipContent rapp={rapp} />}
               side="top"
               className="block"
+              disabled={!!dragState}
             >
               <div
                 draggable

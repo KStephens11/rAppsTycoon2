@@ -8,6 +8,8 @@ interface TooltipProps {
   className?: string;
   /** Which side to show the tooltip. Defaults to 'top'. */
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /** When true, the tooltip is suppressed */
+  disabled?: boolean;
 }
 
 const GAP = 8; // px gap between trigger and tooltip
@@ -58,7 +60,7 @@ const sideMotion = {
   left:   { initial: { opacity: 0, x: 6  }, animate: { opacity: 1, x: 0  } },
 } as const;
 
-export function Tooltip({ content, children, className = '', side = 'top' }: TooltipProps) {
+export function Tooltip({ content, children, className = '', side = 'top', disabled = false }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState<Coords>({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -70,9 +72,15 @@ export function Tooltip({ content, children, className = '', side = 'top' }: Too
   }, [side]);
 
   const handleMouseEnter = useCallback(() => {
+    if (disabled) return;
     updateCoords();
     setIsVisible(true);
-  }, [updateCoords]);
+  }, [updateCoords, disabled]);
+
+  // Hide when disabled changes to true
+  useEffect(() => {
+    if (disabled) setIsVisible(false);
+  }, [disabled]);
 
   // Keep position in sync while visible (handles scroll inside the panel)
   useEffect(() => {
