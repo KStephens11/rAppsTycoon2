@@ -35,8 +35,11 @@ public class GameSessionController {
     @PostMapping("/{code}/start")
     public ResponseEntity<SessionResponse> startSession(
             @PathVariable String code,
-            @RequestHeader("X-Session-Token") String token) {
-        SessionResponse response = gameSessionService.startSession(code, token);
+            @RequestHeader("X-Session-Token") String token,
+            @RequestBody(required = false) StartSessionRequest request) {
+        int durationMinutes = (request != null && request.durationMinutes() != null)
+                ? request.durationMinutes() : 5;
+        SessionResponse response = gameSessionService.startSession(code, token, durationMinutes);
         return ResponseEntity.ok(response);
     }
 

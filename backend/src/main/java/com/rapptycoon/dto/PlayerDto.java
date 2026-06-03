@@ -8,5 +8,6 @@ public record PlayerDto(
         String displayName,
         String sessionToken,
         boolean isHost,
-        boolean connected
+        boolean connected,
+        boolean isBot
 ) {}

@@ -5,6 +5,7 @@ export interface Player {
   displayName: string;
   isHost: boolean;
   connected?: boolean;
+  isBot?: boolean;
 }
 
 export interface FinalLeaderboardEntry {

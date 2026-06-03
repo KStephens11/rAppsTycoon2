@@ -91,6 +91,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Fabric8 Kubernetes Client -->
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-client</artifactId>
+            <version>6.13.1</version>
+        </dependency>
+
         <!-- Karate API Integration Testing -->
         <dependency>
             <groupId>com.intuit.karate</groupId>

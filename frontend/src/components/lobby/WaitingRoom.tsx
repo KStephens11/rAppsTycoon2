@@ -1,8 +1,8 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Crown, Users, Play, LogOut } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Copy, Crown, Users, Play, LogOut, Bot, Plus } from 'lucide-react';
+import { Button } from '../ui';
 import { useGame, type Player } from '../../context/GameContext';
 import { apiGet, apiPost, ApiError } from '../../services/api';
 
@@ -16,6 +16,10 @@ interface SessionResponse {
 export function WaitingRoom() {
   const { sessionCode, token, isHost, players, playerId, setPlayers, setGameState, reset } = useGame();
   const navigate = useNavigate();
+  const [botDifficulty, setBotDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+  const [addingBot, setAddingBot] = useState(false);
+  const [botError, setBotError] = useState('');
+  const [gameDuration, setGameDuration] = useState(5);
 
   // Poll session state every 2 seconds
   useEffect(() => {
@@ -51,14 +55,40 @@ export function WaitingRoom() {
   const handleStart = async () => {
     if (!sessionCode || !token) return;
     try {
-      await apiPost(`/api/sessions/${sessionCode}/start`, {}, token);
+      await apiPost(`/api/sessions/${sessionCode}/start`, { durationMinutes: gameDuration }, token);
       setGameState('active');
       navigate('/game');
     } catch (err) {
       if (err instanceof ApiError) {
-        // Error will be handled by parent via toast
         throw err;
       }
+    }
+  };
+
+  const handleAddBot = async () => {
+    if (!sessionCode || !token) return;
+    setBotError('');
+    setAddingBot(true);
+    try {
+      await apiPost(`/api/sessions/${sessionCode}/bots`, {
+        count: 1,
+        difficulty: botDifficulty,
+      }, token);
+      // Polling will pick up the new player, but let's refresh immediately
+      const data = await apiGet<SessionResponse>(`/api/sessions/${sessionCode}`, token);
+      setPlayers(data.players);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.code === 'SESSION_FULL') {
+          setBotError('Lobby is full (6/6 players)');
+        } else {
+          setBotError(err.message);
+        }
+      } else {
+        setBotError('Failed to add bot');
+      }
+    } finally {
+      setAddingBot(false);
     }
   };
 
@@ -106,9 +136,13 @@ export function WaitingRoom() {
               className="flex items-center justify-between py-2 px-3 rounded-lg mb-1 last:mb-0 hover:bg-surface-lighter/50 transition-colors"
             >
               <span className={`text-sm font-medium ${player.id === playerId ? 'text-primary' : 'text-text'}`}>
+                {player.isBot && <Bot size={14} className="inline mr-1.5 text-info" />}
                 {player.displayName}
                 {player.id === playerId && (
                   <span className="text-text-muted text-xs ml-2">(you)</span>
+                )}
+                {player.isBot && (
+                  <span className="text-text-muted text-xs ml-2">(bot)</span>
                 )}
               </span>
               {player.isHost && (
@@ -119,18 +153,80 @@ export function WaitingRoom() {
         </AnimatePresence>
       </div>
 
+      {/* Add Bot Panel (host only) */}
+      {isHost && players.length < 6 && (
+        <div className="w-full rounded-xl border border-surface-lighter bg-surface-light p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Bot size={16} className="text-info" />
+            <span className="text-sm font-medium text-text">Add Bot Player</span>
+          </div>
+
+          <div className="flex items-center gap-3 mb-3">
+            <label className="text-xs text-text-muted">Difficulty:</label>
+            <select
+              value={botDifficulty}
+              onChange={(e) => setBotDifficulty(e.target.value as 'EASY' | 'MEDIUM' | 'HARD')}
+              className="flex-1 rounded-lg border border-surface-lighter bg-surface px-3 py-1.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label="Bot difficulty"
+            >
+              <option value="EASY">Easy (slow reactions)</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HARD">Hard (instant reactions)</option>
+            </select>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAddBot}
+            disabled={addingBot || players.length >= 6}
+            className="w-full gap-2"
+          >
+            <Plus size={14} />
+            {addingBot ? 'Adding...' : 'Add Bot'}
+          </Button>
+
+          {botError && (
+            <p className="mt-2 text-xs text-danger">{botError}</p>
+          )}
+        </div>
+      )}
+
       {/* Start Game Button (host only) */}
       {isHost && (
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={handleStart}
-          disabled={players.length < 2}
-          className="w-full gap-2"
-        >
-          <Play size={18} />
-          Start Game
-        </Button>
+        <div className="w-full flex flex-col gap-3">
+          {/* Game Duration Selector */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-text-muted whitespace-nowrap">Game Length:</label>
+            <div className="flex gap-1 flex-1">
+              {[1, 2, 3, 4, 5].map((min) => (
+                <button
+                  key={min}
+                  onClick={() => setGameDuration(min)}
+                  className={`flex-1 py-1.5 px-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    gameDuration === min
+                      ? 'bg-primary text-surface'
+                      : 'bg-surface-lighter text-text-muted hover:text-text'
+                  }`}
+                  aria-label={`${min} minute${min > 1 ? 's' : ''}`}
+                >
+                  {min}m
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handleStart}
+            disabled={players.length < 2}
+            className="w-full gap-2"
+          >
+            <Play size={18} />
+            Start Game
+          </Button>
+        </div>
       )}
 
       {!isHost && (

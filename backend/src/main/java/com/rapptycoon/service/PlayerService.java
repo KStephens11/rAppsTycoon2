@@ -143,7 +143,8 @@ public class PlayerService {
                 player.getDisplayName(),
                 player.getSessionToken(),
                 false, // isHost is not determined here; caller can set if needed
-                player.isConnected()
+                player.isConnected(),
+                player.isBot()
         );
 
         return new ReconnectResponse(playerDto, basestationStates);

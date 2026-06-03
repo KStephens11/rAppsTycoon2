@@ -49,6 +49,13 @@ public class Player {
     @Builder.Default
     private boolean connected = false;
 
+    @Column(name = "is_bot", nullable = false)
+    @Builder.Default
+    private boolean isBot = false;
+
+    @Column(name = "difficulty", length = 10)
+    private String difficulty;
+
     @Version
     private Long version;
 }
