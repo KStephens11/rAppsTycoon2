@@ -11,7 +11,7 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 }
 
 // Stub HTMLCanvasElement.getContext so GameMap's 2D canvas doesn't crash in jsdom
-HTMLCanvasElement.prototype.getContext = function () {
+HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
   const noop = () => {};
   const self = this;
   return new Proxy({}, {
