@@ -68,7 +68,11 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch 'main'
+                expression {
+                    env.BRANCH_NAME == 'main' ||
+                    env.GIT_BRANCH == 'main' ||
+                    env.GIT_BRANCH == 'origin/main'
+                }
             }
             steps {
                 sh 'kubectl apply -f k8s/configmap.yaml'
@@ -93,10 +97,10 @@ pipeline {
 
     post {
         failure {
-            echo "Pipeline failed on branch ${env.BRANCH_NAME}, build #${BUILD_NUMBER}"
+            echo "Pipeline failed on branch ${env.BRANCH_NAME ?: env.GIT_BRANCH}, build #${BUILD_NUMBER}"
         }
         success {
-            echo "Pipeline succeeded on branch ${env.BRANCH_NAME}, build #${BUILD_NUMBER}"
+            echo "Pipeline succeeded on branch ${env.BRANCH_NAME ?: env.GIT_BRANCH}, build #${BUILD_NUMBER}"
         }
     }
 }
