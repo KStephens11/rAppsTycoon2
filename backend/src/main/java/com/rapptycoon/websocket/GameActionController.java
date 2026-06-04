@@ -4,8 +4,6 @@ import com.rapptycoon.model.Player;
 import com.rapptycoon.repository.GameSessionRepository;
 import com.rapptycoon.repository.PlayerRepository;
 import com.rapptycoon.service.RappService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -20,8 +18,6 @@ import java.util.Map;
  */
 @Controller
 public class GameActionController {
-
-    private static final Logger log = LoggerFactory.getLogger(GameActionController.class);
 
     private final RappService rappService;
     private final PlayerRepository playerRepository;
@@ -44,7 +40,6 @@ public class GameActionController {
                              SimpMessageHeaderAccessor headerAccessor) {
         Long playerId = (Long) headerAccessor.getSessionAttributes().get(WebSocketAuthInterceptor.PLAYER_ID_ATTR);
         if (playerId == null) {
-            log.warn("Action received without authenticated player for session {}", code);
             return;
         }
 
@@ -72,8 +67,6 @@ public class GameActionController {
                         "Unknown action: " + action);
             }
         } catch (Exception e) {
-            log.error("Error handling action {} for player {} in session {}: {}",
-                    action, playerId, code, e.getMessage());
             sendActionError(code, playerId, "VALIDATION_ERROR", e.getMessage());
         }
     }

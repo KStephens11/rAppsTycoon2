@@ -6,8 +6,6 @@ import com.rapptycoon.repository.GameSessionRepository;
 import com.rapptycoon.repository.PlayerRepository;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,8 +20,6 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class BotManagerImpl implements BotManager {
 
-    private static final Logger log = LoggerFactory.getLogger(BotManagerImpl.class);
-
     private static final String BOT_POD_PREFIX = "bot-player-";
     private static final String BOT_IMAGE = "bot-player:latest";
     private static final String BOT_NAMESPACE = "default";
@@ -31,15 +27,6 @@ public class BotManagerImpl implements BotManager {
     private static final String LABEL_COMPONENT = "rapptycoon/component";
     private static final String LABEL_COMPONENT_VALUE = "bot-player";
     private static final int POD_STARTUP_TIMEOUT_SECONDS = 30;
-
-    /**
-     * Sanitizes a value for safe logging by replacing CR, LF, and TAB characters.
-     * Prevents log injection (Sonar javasecurity:S5145).
-     */
-    private static String sanitize(String value) {
-        if (value == null) return "null";
-        return value.replaceAll("[\\r\\n\\t]", "_");
-    }
 
     private final GameSessionRepository gameSessionRepository;
     private final PlayerRepository playerRepository;
@@ -62,9 +49,6 @@ public class BotManagerImpl implements BotManager {
     @Override
     public void provisionBots(String sessionCode) {
         if (!kubernetesEnabled) {
-            log.info("Kubernetes bot provisioning is disabled (rapptycoon.bot.kubernetes.enabled=false). " +
-                     "Bots for session {} will not be provisioned as pods. " +
-                     "Run bot-player manually or use 'docker compose --profile bot run bot-player'.", sanitize(sessionCode));
             return;
         }
 
@@ -78,19 +62,14 @@ public class BotManagerImpl implements BotManager {
                 .toList();
 
         if (botPlayers.isEmpty()) {
-            log.info("No bot players found for session {}, skipping pod provisioning", sanitize(sessionCode));
             return;
         }
-
-        log.info("Provisioning {} bot pod(s) for session {}", botPlayers.size(), sanitize(sessionCode));
 
         for (Player bot : botPlayers) {
             try {
                 createBotPod(sessionCode, bot);
             } catch (Exception e) {
-                log.error("Failed to create pod for bot '{}' in session {}: {}",
-                        sanitize(bot.getDisplayName()), sanitize(sessionCode), sanitize(e.getMessage()), e);
-                // Log and continue — game proceeds without this bot
+                // Continue — game proceeds without this bot
             }
         }
     }
@@ -100,8 +79,6 @@ public class BotManagerImpl implements BotManager {
         if (!kubernetesEnabled) {
             return;
         }
-
-        log.info("Cleaning up bot pods for session {}", sanitize(sessionCode));
 
         try {
             Map<String, String> labelSelector = Map.of(
@@ -113,11 +90,8 @@ public class BotManagerImpl implements BotManager {
                     .inNamespace(BOT_NAMESPACE)
                     .withLabels(labelSelector)
                     .delete();
-
-            log.info("Successfully deleted bot pods for session {}", sanitize(sessionCode));
         } catch (Exception e) {
-            log.error("Failed to cleanup bot pods for session {}: {}",
-                    sanitize(sessionCode), sanitize(e.getMessage()), e);
+            // Cleanup failed silently
         }
     }
 
@@ -171,25 +145,19 @@ public class BotManagerImpl implements BotManager {
                 .endSpec()
                 .build();
 
-        log.info("Creating bot pod '{}' for bot '{}' in session {}",
-                sanitize(podName), sanitize(bot.getDisplayName()), sanitize(sessionCode));
-
         kubernetesClient.pods()
                 .inNamespace(BOT_NAMESPACE)
                 .resource(pod)
                 .create();
 
-        // Wait for pod to start (up to 30 seconds), but log and continue if it doesn't
+        // Wait for pod to start (up to 30 seconds), continue if it doesn't
         try {
             kubernetesClient.pods()
                     .inNamespace(BOT_NAMESPACE)
                     .withName(podName)
                     .waitUntilReady(POD_STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-            log.info("Bot pod '{}' is ready for session {}", sanitize(podName), sanitize(sessionCode));
         } catch (Exception e) {
-            log.warn("Bot pod '{}' did not become ready within {} seconds for session {}. Continuing without it.",
-                    sanitize(podName), POD_STARTUP_TIMEOUT_SECONDS, sanitize(sessionCode));
+            // Pod did not become ready in time — continue without it
         }
     }
 
