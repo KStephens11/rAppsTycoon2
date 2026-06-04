@@ -34,14 +34,16 @@ export function MascotByte({ mood = 'happy', size = 88, className = '' }: Mascot
         <circle cx="50" cy="5" r="4" fill="#06b6d4" />
         {/* Pulsing signal rings */}
         <motion.circle
-          cx="50" cy="5" r="8"
+          cx="50" cy="5"
           fill="none" stroke="#06b6d4" strokeWidth="1.5"
+          initial={{ r: 8, opacity: 0.7 }}
           animate={{ r: [8, 14], opacity: [0.7, 0] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
         />
         <motion.circle
-          cx="50" cy="5" r="13"
+          cx="50" cy="5"
           fill="none" stroke="#06b6d4" strokeWidth="1"
+          initial={{ r: 13, opacity: 0.3 }}
           animate={{ r: [13, 20], opacity: [0.3, 0] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', delay: 0.35 }}
         />
