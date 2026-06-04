@@ -46,7 +46,7 @@ const STEPS: { title: string; mood: MascotMood; speech: string }[] = [
     title: 'Your Basestations',
     mood: 'happy',
     speech:
-      "You control 3 basestations — the towers that power the network. Each station has 6 key health metrics. Keep them in the green to keep your customers happy and your score high!",
+      "You control 4 basestations — the towers that power the network. Each station has 6 key health metrics. Keep them in the green to keep your customers happy and your score high!",
   },
   {
     title: 'The rApp Catalogue',
