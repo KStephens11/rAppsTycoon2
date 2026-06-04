@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.SplittableRandom;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -42,8 +43,18 @@ class InProcessBotPlayerTest {
     @Mock
     private RappService rappService;
 
+    @Mock
+    private SplittableRandom random;
+
     @InjectMocks
     private InProcessBotPlayer inProcessBotPlayer;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        // Default: random always returns 0.0 so bots always act (0.0 <= any actionChance)
+        when(random.nextDouble()).thenReturn(0.0);
+        inProcessBotPlayer.setRandom(random);
+    }
 
     private Player createBotPlayer(Long id, String difficulty, BigDecimal money) {
         return Player.builder()
@@ -505,6 +516,144 @@ class InProcessBotPlayerTest {
 
             // Should pick template 5 (no conflict), not template 1 (conflicts with 2)
             verify(rappService).deploy("ABCD1234", "bot-token-1", 5L, 10L);
+        }
+    }
+
+    @Nested
+    @DisplayName("difficulty scaling")
+    class DifficultyScaling {
+
+        @Test
+        @DisplayName("EASY bot skips action when random value exceeds 0.30 threshold")
+        void easyBotSkipsWhenRandomExceedsThreshold() {
+            Player bot = createBotPlayer(1L, "EASY", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            // Random returns 0.5 which exceeds EASY threshold of 0.30
+            when(random.nextDouble()).thenReturn(0.5);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService, never()).deploy(anyString(), anyString(), anyLong(), anyLong());
+        }
+
+        @Test
+        @DisplayName("EASY bot acts when random value is within 0.30 threshold")
+        void easyBotActsWhenRandomWithinThreshold() {
+            Player bot = createBotPlayer(1L, "EASY", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+            RappTemplate template = createTemplate(5L, "SLA Manager", new BigDecimal("90.00"));
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            when(gameEventRepository.findByBasestationIdAndResolvedFalse(10L)).thenReturn(Collections.emptyList());
+            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.ACTIVE))
+                    .thenReturn(Collections.emptyList());
+            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.DEPLOYING))
+                    .thenReturn(Collections.emptyList());
+            when(rappTemplateRepository.findById(5L)).thenReturn(Optional.of(template));
+            // Random returns 0.2 which is within EASY threshold of 0.30
+            when(random.nextDouble()).thenReturn(0.2);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService).deploy("ABCD1234", "bot-token-1", 5L, 10L);
+        }
+
+        @Test
+        @DisplayName("MEDIUM bot skips action when random value exceeds 0.50 threshold")
+        void mediumBotSkipsWhenRandomExceedsThreshold() {
+            Player bot = createBotPlayer(1L, "MEDIUM", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            // Random returns 0.7 which exceeds MEDIUM threshold of 0.50
+            when(random.nextDouble()).thenReturn(0.7);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService, never()).deploy(anyString(), anyString(), anyLong(), anyLong());
+        }
+
+        @Test
+        @DisplayName("MEDIUM bot acts when random value is within 0.50 threshold")
+        void mediumBotActsWhenRandomWithinThreshold() {
+            Player bot = createBotPlayer(1L, "MEDIUM", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+            RappTemplate template = createTemplate(5L, "SLA Manager", new BigDecimal("90.00"));
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            when(gameEventRepository.findByBasestationIdAndResolvedFalse(10L)).thenReturn(Collections.emptyList());
+            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.ACTIVE))
+                    .thenReturn(Collections.emptyList());
+            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.DEPLOYING))
+                    .thenReturn(Collections.emptyList());
+            when(rappTemplateRepository.findById(5L)).thenReturn(Optional.of(template));
+            // Random returns 0.3 which is within MEDIUM threshold of 0.50
+            when(random.nextDouble()).thenReturn(0.3);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService).deploy("ABCD1234", "bot-token-1", 5L, 10L);
+        }
+
+        @Test
+        @DisplayName("HARD bot skips action when random value exceeds 0.75 threshold")
+        void hardBotSkipsWhenRandomExceedsThreshold() {
+            Player bot = createBotPlayer(1L, "HARD", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            // Random returns 0.9 which exceeds HARD threshold of 0.75
+            when(random.nextDouble()).thenReturn(0.9);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService, never()).deploy(anyString(), anyString(), anyLong(), anyLong());
+        }
+
+        @Test
+        @DisplayName("HARD bot acts when random value is within 0.75 threshold")
+        void hardBotActsWhenRandomWithinThreshold() {
+            Player bot = createBotPlayer(1L, "HARD", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+            RappTemplate template = createTemplate(5L, "SLA Manager", new BigDecimal("90.00"));
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            when(gameEventRepository.findByBasestationIdAndResolvedFalse(10L)).thenReturn(Collections.emptyList());
+            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.ACTIVE))
+                    .thenReturn(Collections.emptyList());
+            when(rappDeploymentRepository.findByBasestationIdAndStatus(10L, DeploymentStatus.DEPLOYING))
+                    .thenReturn(Collections.emptyList());
+            when(rappTemplateRepository.findById(5L)).thenReturn(Optional.of(template));
+            // Random returns 0.6 which is within HARD threshold of 0.75
+            when(random.nextDouble()).thenReturn(0.6);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService).deploy("ABCD1234", "bot-token-1", 5L, 10L);
+        }
+
+        @Test
+        @DisplayName("bot with unrecognised difficulty defaults to MEDIUM (0.50 threshold)")
+        void unknownDifficultyDefaultsToMedium() {
+            Player bot = createBotPlayer(1L, "UNKNOWN", new BigDecimal("500.00"));
+            Basestation bs = createLowMetricsBasestation(10L, 1L);
+
+            when(playerRepository.findBySessionId(1L)).thenReturn(List.of(bot));
+            when(basestationRepository.findByPlayerId(1L)).thenReturn(List.of(bs));
+            // Random returns 0.6 which exceeds default MEDIUM threshold of 0.50
+            when(random.nextDouble()).thenReturn(0.6);
+
+            inProcessBotPlayer.executeBotActions(1L, "ABCD1234");
+
+            verify(rappService, never()).deploy(anyString(), anyString(), anyLong(), anyLong());
         }
     }
 }

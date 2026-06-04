@@ -32,6 +32,15 @@ public class BotManagerImpl implements BotManager {
     private static final String LABEL_COMPONENT_VALUE = "bot-player";
     private static final int POD_STARTUP_TIMEOUT_SECONDS = 30;
 
+    /**
+     * Sanitizes a value for safe logging by replacing newlines and control characters.
+     * Prevents log injection (Sonar javasecurity:S5145).
+     */
+    private static String sanitize(String value) {
+        if (value == null) return "null";
+        return value.replaceAll("[\\r\\n\\t]", "_");
+    }
+
     private final GameSessionRepository gameSessionRepository;
     private final PlayerRepository playerRepository;
     private final KubernetesClient kubernetesClient;
@@ -80,7 +89,7 @@ public class BotManagerImpl implements BotManager {
                 createBotPod(sessionCode, bot);
             } catch (Exception e) {
                 log.error("Failed to create pod for bot '{}' in session {}: {}",
-                        bot.getDisplayName(), sessionCode, e.getMessage(), e);
+                        sanitize(bot.getDisplayName()), sessionCode, e.getMessage(), e);
                 // Log and continue — game proceeds without this bot
             }
         }
@@ -163,7 +172,7 @@ public class BotManagerImpl implements BotManager {
                 .build();
 
         log.info("Creating bot pod '{}' for bot '{}' in session {}",
-                podName, bot.getDisplayName(), sessionCode);
+                podName, sanitize(bot.getDisplayName()), sessionCode);
 
         kubernetesClient.pods()
                 .inNamespace(BOT_NAMESPACE)
