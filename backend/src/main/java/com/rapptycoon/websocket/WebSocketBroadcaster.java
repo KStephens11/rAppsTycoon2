@@ -58,14 +58,4 @@ public class WebSocketBroadcaster {
         messagingTemplate.convertAndSend(destination, message);
         log.debug("Sent metrics update to player {} in session {}", playerId, sessionCode);
     }
-
-    /**
-     * Sends rApp status change to a specific player.
-     * Sends to /topic/session/{code}/player/{playerId}/rapps
-     */
-    public void sendRappStatusChange(String sessionCode, Long playerId, WebSocketMessage message) {
-        String destination = "/topic/session/" + sessionCode + "/player/" + playerId + "/rapps";
-        messagingTemplate.convertAndSend(destination, message);
-        log.debug("Sent rApp status change to player {} in session {}", playerId, sessionCode);
-    }
 }

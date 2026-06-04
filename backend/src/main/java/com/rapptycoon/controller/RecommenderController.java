@@ -1,6 +1,6 @@
 package com.rapptycoon.controller;
 
-import com.rapptycoon.dto.RecommendationsResponse;
+import com.rapptycoon.dto.RecommendationResponse;
 import com.rapptycoon.service.RecommenderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +16,10 @@ public class RecommenderController {
     }
 
     @GetMapping("/{code}/recommendations")
-    public ResponseEntity<RecommendationsResponse> getRecommendations(
+    public ResponseEntity<RecommendationResponse> getRecommendations(
             @PathVariable String code,
             @RequestHeader("X-Session-Token") String token) {
-        RecommendationsResponse response = recommenderService.getRecommendations(code, token);
+        RecommendationResponse response = recommenderService.getRecommendations(code, token);
         return ResponseEntity.ok(response);
     }
 }

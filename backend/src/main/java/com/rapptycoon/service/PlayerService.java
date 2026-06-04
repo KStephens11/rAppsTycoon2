@@ -1,9 +1,6 @@
 package com.rapptycoon.service;
 
-import com.rapptycoon.dto.*;
 import com.rapptycoon.exception.UnauthorizedException;
-import com.rapptycoon.model.Basestation;
-import com.rapptycoon.model.GameEvent;
 import com.rapptycoon.model.Player;
 import com.rapptycoon.model.RappDeployment;
 import com.rapptycoon.model.RappTemplate;
@@ -16,13 +13,8 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.util.List;
-
 @Service
 public class PlayerService {
-
-    private static final int TOKEN_LENGTH = 64;
 
     private final PlayerRepository playerRepository;
     private final BasestationRepository basestationRepository;

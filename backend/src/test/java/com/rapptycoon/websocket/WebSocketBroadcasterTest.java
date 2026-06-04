@@ -29,7 +29,7 @@ class WebSocketBroadcasterTest {
     @Test
     void broadcastToSession_sendsToCorrectTopic() {
         String sessionCode = "ABC12345";
-        WebSocketMessage message = WebSocketMessage.of(MessageType.GAME_STARTED, Map.of("sessionCode", sessionCode));
+        WebSocketMessage message = WebSocketMessage.of(MessageType.GAME_ENDED, Map.of("sessionCode", sessionCode));
 
         broadcaster.broadcastToSession(sessionCode, message);
 
@@ -45,7 +45,7 @@ class WebSocketBroadcasterTest {
     void sendToPlayer_sendsToCorrectPlayerTopic() {
         String sessionCode = "XYZ99999";
         Long playerId = 42L;
-        WebSocketMessage message = WebSocketMessage.of(MessageType.EVENT_OCCURRED, Map.of("eventId", 5));
+        WebSocketMessage message = WebSocketMessage.of(MessageType.ACTION_ERROR, Map.of("eventId", 5));
 
         broadcaster.sendToPlayer(sessionCode, playerId, message);
 
@@ -82,20 +82,5 @@ class WebSocketBroadcasterTest {
         verify(messagingTemplate).convertAndSend(destinationCaptor.capture(), (Object) org.mockito.ArgumentMatchers.any());
 
         assertThat(destinationCaptor.getValue()).isEqualTo("/topic/session/SESS0002/player/7/metrics");
-    }
-
-    @Test
-    void sendRappStatusChange_sendsToPlayerRappsTopic() {
-        String sessionCode = "SESS0003";
-        Long playerId = 10L;
-        WebSocketMessage message = WebSocketMessage.of(MessageType.RAPP_STATUS_CHANGED,
-                Map.of("deploymentId", 5, "newStatus", "ACTIVE"));
-
-        broadcaster.sendRappStatusChange(sessionCode, playerId, message);
-
-        ArgumentCaptor<String> destinationCaptor = ArgumentCaptor.forClass(String.class);
-        verify(messagingTemplate).convertAndSend(destinationCaptor.capture(), (Object) org.mockito.ArgumentMatchers.any());
-
-        assertThat(destinationCaptor.getValue()).isEqualTo("/topic/session/SESS0003/player/10/rapps");
     }
 }
