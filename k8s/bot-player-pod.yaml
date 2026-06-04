@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bot-player-REPLACE_ME
+  labels:
+    app: bot-player
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsUser: 1000
+    runAsNonRoot: true
+  containers:
+    - name: bot-player
+      image: rapp-bot-player:latest
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: SESSION_CODE
+          value: REPLACE_ME
+        - name: SESSION_TOKEN
+          value: REPLACE_ME
+        - name: DIFFICULTY
+          value: REPLACE_ME
+        - name: BACKEND_BASE_URL
+          value: REPLACE_ME
+      ports:
+        - containerPort: 8081
+          name: health
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 8081
+        initialDelaySeconds: 5
+        periodSeconds: 10
+      resources:
+        limits:
+          memory: 64Mi
+          cpu: 100m
+        requests:
+          memory: 32Mi
+          cpu: 50m

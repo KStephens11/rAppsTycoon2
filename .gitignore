@@ -1,0 +1,36 @@
+# Build output
+target/
+build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log
+
+# Node (frontend)
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Docker
+.docker/
+
+# Kubernetes secrets
+k8s/secret.yaml

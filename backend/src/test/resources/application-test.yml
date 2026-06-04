@@ -1,0 +1,45 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
+
+# Override game parameters for faster testing
+game:
+  tick:
+    interval: 100
+    total: 5
+  players:
+    min: 2
+    max: 6
+  basestations:
+    per-player: 4
+  score:
+    weight:
+      money: 0.10
+      satisfaction: 0.45
+      stability: 0.45
+  events:
+    base-rate: 0.3
+    player-multiplier: 0.2
+  escalation:
+    max-level: 3
+    auto-resolve-after: 5
+  rapp:
+    deployment-ticks: 1
+    resolve-ticks: 1
+
+# Internal API
+internal:
+  api-key: test-internal-key

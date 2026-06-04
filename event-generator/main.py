@@ -1,0 +1,205 @@
+"""Main entry point for the Event Generator service."""
+import logging
+import signal
+import sys
+import time
+from typing import Dict
+
+import schedule
+
+from config import get_config
+from client import BackendClient, BackendClientError
+from events import calculate_event_count, generate_event
+
+
+# Global flag for graceful shutdown
+shutdown_requested = False
+
+# Per-session tick counters
+session_tick_counters: Dict[str, int] = {}
+
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully."""
+    global shutdown_requested
+    logger = logging.getLogger(__name__)
+    logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+    shutdown_requested = True
+
+
+def tick_job():
+    """Execute one tick of event generation across all active sessions."""
+    logger = logging.getLogger(__name__)
+    config = get_config()
+    client = BackendClient()
+    
+    sessions_processed = 0
+    events_pushed = 0
+    errors = 0
+    
+    try:
+        # Get all active sessions
+        active_sessions = client.get_active_sessions()
+        
+        for session in active_sessions:
+            session_code = session['sessionCode']
+            player_count = session['playerCount']
+            basestation_ids = session['basestationIds']
+            
+            # Initialize or increment tick counter for this session
+            if session_code not in session_tick_counters:
+                session_tick_counters[session_code] = 0
+                logger.info(f"New session detected: {session_code} with {player_count} players")
+            
+            tick_number = session_tick_counters[session_code]
+            
+            # Calculate how many events to generate this tick
+            event_count = calculate_event_count(
+                player_count,
+                config.events_base_rate,
+                config.events_player_multiplier
+            )
+            
+            # Generate and push events — same event goes to all players (fairness)
+            for _ in range(event_count):
+                if not basestation_ids:
+                    logger.warning(f"Session {session_code} has no basestations")
+                    continue
+                
+                # Get per-player basestation groups (list of lists)
+                bs_by_player = session.get('basestationIdsByPlayer', [])
+                # Get basestation ID → name mapping
+                bs_names = session.get('basestationNames', {})
+                
+                def get_bs_name(bs_id):
+                    """Look up basestation name, fallback to ID-based name."""
+                    return bs_names.get(str(bs_id), bs_names.get(bs_id, f"BS-{bs_id}"))
+                
+                if not bs_by_player or not bs_by_player[0]:
+                    # Fallback: old behavior if grouping not available
+                    import random
+                    basestation_id = random.choice(basestation_ids)
+                    
+                    event = generate_event(
+                        basestation_id,
+                        get_bs_name(basestation_id),
+                        tick_number,
+                        config.tick_total
+                    )
+                    
+                    try:
+                        client.push_event(session_code, event)
+                        events_pushed += 1
+                    except BackendClientError as e:
+                        logger.warning(f"Failed to push event to {session_code}: {e}")
+                        errors += 1
+                else:
+                    # Fair mode: pick the same basestation index for each player
+                    import random
+                    bs_count_per_player = len(bs_by_player[0])
+                    bs_index = random.randint(0, bs_count_per_player - 1)
+                    
+                    # Generate one event template using first player's basestation name
+                    first_bs_id = bs_by_player[0][bs_index]
+                    event_template = generate_event(
+                        first_bs_id,
+                        get_bs_name(first_bs_id),
+                        tick_number,
+                        config.tick_total
+                    )
+                    
+                    # Push the same event type/severity to the equivalent basestation of each player
+                    for player_bs_list in bs_by_player:
+                        if bs_index < len(player_bs_list):
+                            target_bs_id = player_bs_list[bs_index]
+                            # Update description with this player's basestation name
+                            target_name = get_bs_name(target_bs_id)
+                            event_copy = {
+                                **event_template,
+                                'basestationId': target_bs_id,
+                                'description': event_template['description'].replace(
+                                    get_bs_name(first_bs_id), target_name
+                                ) if first_bs_id != target_bs_id else event_template['description'],
+                            }
+                            try:
+                                client.push_event(session_code, event_copy)
+                                events_pushed += 1
+                                logger.debug(
+                                    f"Pushed {event_copy['eventType']} ({event_copy['severity']}) "
+                                    f"to {session_code}/{target_name}"
+                                )
+                            except BackendClientError as e:
+                                logger.warning(f"Failed to push event to {session_code}: {e}")
+                                errors += 1
+            
+            # Increment tick counter
+            session_tick_counters[session_code] += 1
+            sessions_processed += 1
+        
+        # Clean up tick counters for sessions that are no longer active
+        active_codes = {s['sessionCode'] for s in active_sessions}
+        removed_sessions = []
+        for session_code in list(session_tick_counters.keys()):
+            if session_code not in active_codes:
+                del session_tick_counters[session_code]
+                removed_sessions.append(session_code)
+        
+        if removed_sessions:
+            logger.info(f"Removed completed sessions: {', '.join(removed_sessions)}")
+        
+        logger.debug(
+            f"Tick complete: {sessions_processed} sessions, "
+            f"{events_pushed} events pushed, {errors} errors"
+        )
+    
+    except BackendClientError as e:
+        logger.warning(f"Failed to get active sessions: {e}")
+
+
+def main():
+    """Main entry point."""
+    global shutdown_requested
+    
+    # Load configuration (fail fast if invalid)
+    try:
+        config = get_config()
+    except ValueError as e:
+        print(f"Configuration error: {e}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Configure logging
+    logging.basicConfig(
+        level=config.log_level,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    logger = logging.getLogger(__name__)
+    logger.info("Event Generator starting...")
+    logger.info(f"Backend URL: {config.backend_base_url}")
+    logger.info(f"Tick interval: {config.tick_interval_seconds}s")
+    logger.info(f"Event base rate: {config.events_base_rate}")
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Schedule the tick job
+    schedule.every(config.tick_interval_seconds).seconds.do(tick_job)
+    
+    logger.info("Event Generator ready, waiting for active sessions...")
+    
+    # Main loop
+    while not shutdown_requested:
+        schedule.run_pending()
+        time.sleep(0.1)
+    
+    # Complete current tick before shutting down
+    logger.info("Completing current tick before shutdown...")
+    schedule.run_pending()
+    
+    logger.info("Event Generator stopped")
+
+
+if __name__ == '__main__':
+    main()

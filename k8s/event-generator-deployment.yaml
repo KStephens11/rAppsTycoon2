@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: event-generator
+  template:
+    metadata:
+      labels:
+        app: event-generator
+    spec:
+      initContainers:
+        - name: wait-for-backend
+          image: busybox
+          command: ["sh", "-c", "until nc -z backend 8080; do sleep 2; done"]
+      containers:
+        - name: event-generator
+          image: rapp-event-generator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: BACKEND_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: rapp-config
+                  key: BACKEND_BASE_URL
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rapp-secret
+                  key: INTERNAL_API_KEY
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import sys; sys.exit(0)"]
+            initialDelaySeconds: 15
+            periodSeconds: 30
