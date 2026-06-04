@@ -2,6 +2,8 @@ package com.rapptycoon.service;
 
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.model.Player;
+import com.rapptycoon.repository.BasestationRepository;
+import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
 import com.rapptycoon.repository.RappDeploymentRepository;
 import com.rapptycoon.repository.RappTemplateRepository;
