@@ -215,7 +215,7 @@ describe('GamePage simultaneous panel layout', () => {
     expect(await screen.findByText('rApp Catalogue')).toBeInTheDocument();
 
     // Right panel exists with correct classes
-    const rightPanel = container.querySelector('.w-56') || container.querySelector('.w-72') || container.querySelector('.w-64');
+    const rightPanel = container.querySelector('.w-56.bg-surface') || container.querySelector('.w-72.bg-surface') || container.querySelector('.w-64.bg-surface') || container.querySelector('.w-80.bg-surface');
     expect(rightPanel).toBeInTheDocument();
     expect(rightPanel).toHaveClass('bg-surface');
     expect(rightPanel).toHaveClass('border-l');
