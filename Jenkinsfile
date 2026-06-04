@@ -18,7 +18,7 @@ pipeline {
         stage('Test') {
             steps {
                 dir('backend') {
-                    sh './mvnw -B test jacoco:report'
+                    bat 'mvnw.cmd -B test jacoco:report'
                 }
             }
             post {
@@ -47,10 +47,10 @@ pipeline {
             steps {
                 dir('backend') {
                     withSonarQubeEnv('LocalSonar') {
-                        sh """
-                            ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                            -DskipITs \
-                            -Dsonar.projectKey=yuhangzzzz_rapp-tycoon-backend \
+                        bat """
+                            mvnw.cmd -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar ^
+                            -DskipITs ^
+                            -Dsonar.projectKey=yuhangzzzz_rapp-tycoon-backend ^
                             -Dsonar.organization=yuhangzzzz
                         """
                     }
@@ -60,9 +60,9 @@ pipeline {
 
         stage('Build Images') {
             steps {
-                sh "docker build -t ${IMAGE_BACKEND} ./backend"
-                sh "docker build -t ${IMAGE_EVENT_GENERATOR} ./event-generator"
-                sh "docker build -t ${IMAGE_FRONTEND} ./frontend"
+                bat "docker build -t ${IMAGE_BACKEND} ./backend"
+                bat "docker build -t ${IMAGE_EVENT_GENERATOR} ./event-generator"
+                bat "docker build -t ${IMAGE_FRONTEND} ./frontend"
             }
         }
 
@@ -71,27 +71,32 @@ pipeline {
                 expression {
                     env.BRANCH_NAME == 'main' ||
                     env.GIT_BRANCH == 'main' ||
-                    env.GIT_BRANCH == 'origin/main'
+                    env.GIT_BRANCH == 'origin/main' ||
+                    env.BRANCH_NAME == 'fix-jenkins' ||
+                    env.GIT_BRANCH == 'fix-jenkins' ||
+                    env.GIT_BRANCH == 'origin/fix-jenkins'
                 }
             }
             steps {
-                sh 'kubectl apply -f k8s/secret.yaml'
-                sh 'kubectl apply -f k8s/configmap.yaml'
-                sh 'kubectl apply -f k8s/mysql-pvc.yaml'
-                sh 'kubectl apply -f k8s/mysql-deployment.yaml'
-                sh 'kubectl apply -f k8s/mysql-service.yaml'
-                sh 'kubectl apply -f k8s/backend-deployment.yaml'
-                sh 'kubectl apply -f k8s/backend-service.yaml'
-                sh 'kubectl apply -f k8s/event-generator-deployment.yaml'
-                sh 'kubectl apply -f k8s/frontend-deployment.yaml'
-                sh 'kubectl apply -f k8s/frontend-service.yaml'
-                sh 'kubectl apply -f k8s/frontend-hpa.yaml'
-                sh "kubectl set image deployment/backend backend=${IMAGE_BACKEND}"
-                sh "kubectl set image deployment/event-generator event-generator=${IMAGE_EVENT_GENERATOR}"
-                sh "kubectl set image deployment/frontend frontend=${IMAGE_FRONTEND}"
-                sh 'kubectl rollout status deployment/backend'
-                sh 'kubectl rollout status deployment/event-generator'
-                sh 'kubectl rollout status deployment/frontend'
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    bat 'kubectl apply -f k8s/secret.yaml'
+                    bat 'kubectl apply -f k8s/configmap.yaml'
+                    bat 'kubectl apply -f k8s/mysql-pvc.yaml'
+                    bat 'kubectl apply -f k8s/mysql-deployment.yaml'
+                    bat 'kubectl apply -f k8s/mysql-service.yaml'
+                    bat 'kubectl apply -f k8s/backend-deployment.yaml'
+                    bat 'kubectl apply -f k8s/backend-service.yaml'
+                    bat 'kubectl apply -f k8s/event-generator-deployment.yaml'
+                    bat 'kubectl apply -f k8s/frontend-deployment.yaml'
+                    bat 'kubectl apply -f k8s/frontend-service.yaml'
+                    bat 'kubectl apply -f k8s/frontend-hpa.yaml'
+                    bat "kubectl set image deployment/backend backend=${IMAGE_BACKEND}"
+                    bat "kubectl set image deployment/event-generator event-generator=${IMAGE_EVENT_GENERATOR}"
+                    bat "kubectl set image deployment/frontend frontend=${IMAGE_FRONTEND}"
+                    bat 'kubectl rollout status deployment/backend'
+                    bat 'kubectl rollout status deployment/event-generator'
+                    bat 'kubectl rollout status deployment/frontend'
+                }
             }
         }
     }
