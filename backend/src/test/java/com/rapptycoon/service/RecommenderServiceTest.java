@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Assumptions;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -205,6 +206,22 @@ class RecommenderServiceTest {
     @Nested
     @DisplayName("getRecommendations - successful invocation")
     class SuccessfulInvocation {
+
+        @BeforeEach
+        void requirePython() {
+            boolean available = false;
+            for (String cmd : new String[]{"python3", "python"}) {
+                try {
+                    Process p = new ProcessBuilder(cmd, "--version").start();
+                    available = p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS) && p.exitValue() == 0;
+                    if (available) {
+                        ReflectionTestUtils.setField(recommenderService, "pythonPath", cmd);
+                        break;
+                    }
+                } catch (Exception ignored) {}
+            }
+            Assumptions.assumeTrue(available, "Skipping: python3/python not available in this environment");
+        }
 
         @Test
         @DisplayName("returns recommendation when Python script is available")
