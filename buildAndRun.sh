@@ -4,8 +4,14 @@
 echo "Stopping existing containers..."
 docker compose down
 
-echo "Building and starting all services (fresh build)..."
-docker compose up -d --build --force-recreate
+echo "Building frontend with no cache..."
+docker compose build --no-cache frontend
+
+echo "Building other services..."
+docker compose build backend event-generator
+
+echo "Starting all services..."
+docker compose up -d --force-recreate
 
 echo ""
 echo "Services:"

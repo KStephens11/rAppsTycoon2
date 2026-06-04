@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, memo } from 'react';
 import { Radio } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useWebSocket } from '../hooks';
@@ -8,6 +8,8 @@ import { useSoundEffects } from '../hooks';
 import { RappCatalogue, type RappTemplate } from '../components/game/RappCatalogue';
 import { CatalogueStrip } from '../components/game/CatalogueStrip';
 import { TuneModal } from '../components/game/TuneModal';
+import { GameMap } from '../components/game/GameMap';
+import { BasestationPopover } from '../components/game/BasestationPopover';
 import { ToastContainer, type ToastMessage } from '../components/ui';
 import { EventAlertContainer, useEventAlerts } from '../components/game/EventAlert';
 import { EventPanel, type ActiveEvent } from '../components/game/EventPanel';
@@ -20,10 +22,7 @@ import { apiGet, apiPost, apiPut } from '../services/api';
 import { BasestationsSkeleton, LeaderboardSkeleton } from '../components/ui';
 import { DragProvider, useDrag } from '../context/DragContext';
 import { DragPreview } from '../components/game/DragPreview';
-import { BasestationPopover } from '../components/game/BasestationPopover';
 import { Confetti } from '../components/Confetti';
-
-const IsometricMap = lazy(() => import('../components/game/IsometricMap'));
 
 const MemoizedEventPanel = memo(EventPanel);
 const MemoizedLeaderboard = memo(Leaderboard);
@@ -98,11 +97,8 @@ function GamePageInner() {
   const realTimeState = useGameState();
   const { playDeploy, playEventAlert, playGameEnd } = useSoundEffects();
   const { dragState, endDrag } = useDrag();
-  const [selectedBasestationId, setSelectedBasestationId] = useState<number | null>(null);
   const [basestations, setBasestations] = useState<BasestationApiData[]>([]);
   const [basestationsLoading, setBasestationsLoading] = useState(true);
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [popoverAnchor, setPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const [rapps, setRapps] = useState<RappTemplate[]>([]);
   const [currentTick, setCurrentTick] = useState(0);
   const [totalTicks, setTotalTicks] = useState(60);
@@ -117,10 +113,15 @@ function GamePageInner() {
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const [resolvedBasestationIds, setResolvedBasestationIds] = useState<Set<number>>(new Set());
+  const [, setResolvedBasestationIds] = useState<Set<number>>(new Set());
   const [showResolutionCelebration, setShowResolutionCelebration] = useState(false);
+  const [selectedBasestationData, setSelectedBasestationData] = useState<{
+    basestation: BasestationApiData;
+    anchor: { x: number; y: number };
+  } | null>(null);
   const postActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousEventIdsRef = useRef<Map<number, Set<number>>>(new Map());
+  const shouldCelebrateResolutionRef = useRef(false); // Track if we should celebrate event resolution
 
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'success') => {
     const id = crypto.randomUUID();
@@ -182,9 +183,12 @@ function GamePageInner() {
         if (newResolvedBsIds.length > 0) {
           setResolvedBasestationIds(new Set(newResolvedBsIds));
           setTimeout(() => setResolvedBasestationIds(new Set()), 2000);
-          // Trigger celebration burst for any event resolution
-          setShowResolutionCelebration(true);
-          setTimeout(() => setShowResolutionCelebration(false), 2200);
+          // Only trigger celebration if this fetch was triggered by a player action
+          if (shouldCelebrateResolutionRef.current) {
+            setShowResolutionCelebration(true);
+            setTimeout(() => setShowResolutionCelebration(false), 2200);
+            shouldCelebrateResolutionRef.current = false; // Reset flag
+          }
         }
         setBasestations(data.basestations);
         setBasestationsLoading(false);
@@ -198,9 +202,13 @@ function GamePageInner() {
   // After a player action, fetch immediately then again after 6 s (≥ one tick interval)
   // so the resolution detection fires as soon as the tick engine processes the change.
   const fetchBasestationsAfterAction = useCallback(() => {
+    shouldCelebrateResolutionRef.current = true; // Set flag to celebrate resolution
     fetchBasestations();
     if (postActionTimerRef.current) clearTimeout(postActionTimerRef.current);
-    postActionTimerRef.current = setTimeout(fetchBasestations, 6000);
+    postActionTimerRef.current = setTimeout(() => {
+      shouldCelebrateResolutionRef.current = true; // Also celebrate on delayed fetch
+      fetchBasestations();
+    }, 6000);
   }, [fetchBasestations]);
 
   useEffect(() => { fetchBasestations(); }, [fetchBasestations]);
@@ -260,48 +268,14 @@ function GamePageInner() {
 
   useEffect(() => { fetchCatalogue(); }, [fetchCatalogue]);
 
-  const handleSelectBasestation = useCallback((id: number | null) => {
-    setSelectedBasestationId(id);
-  }, []);
-
-  const handleScreenPositionUpdate = useCallback((position: { x: number; y: number } | null) => {
-    setPopoverAnchor(position);
-  }, []);
-
-  const selectedBasestation = useMemo(() => {
-    if (!selectedBasestationId) return null;
-    return basestations.find((bs) => bs.id === selectedBasestationId) ?? null;
-  }, [selectedBasestationId, basestations]);
-
   const handleConfirmDeploy = useCallback(async (templateId: number, basestationId: number) => {
     if (!sessionCode || !token) return;
     await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
     addToast('rApp deployed successfully!', 'success');
     playDeploy();
     fetchBasestationsAfterAction();
-  }, [sessionCode, token, addToast, fetchBasestationsAfterAction, playDeploy]);
-
-  const handleDrop = useCallback(async (basestationId: number) => {
-    if (!dragState || !sessionCode || !token || isDeploying) return;
-    const { templateId } = dragState;
-    setIsDeploying(true);
-    try {
-      await apiPost(`/api/sessions/${sessionCode}/rapps/deploy`, { templateId, basestationId }, token);
-      addToast('rApp deployed successfully!', 'success');
-      playDeploy();
-      fetchBasestationsAfterAction();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to deploy rApp', 'error');
-    } finally {
-      endDrag();
-      setIsDeploying(false);
-    }
-  }, [dragState, sessionCode, token, isDeploying, addToast, playDeploy, fetchBasestations, endDrag]);
-
-  const handleTune = useCallback((rappId: number, rappName: string, threshold?: number, aggressiveness?: string) => {
-    setTuneTarget({ id: rappId, name: rappName, threshold, aggressiveness });
-    setTuneModalOpen(true);
-  }, []);
+    endDrag(); // Clear drag state after successful deployment
+  }, [sessionCode, token, addToast, fetchBasestationsAfterAction, playDeploy, endDrag]);
 
   const handleConfirmTune = useCallback(async (rappId: number, threshold: number, aggressiveness: string) => {
     if (!sessionCode || !token) return;
@@ -310,63 +284,49 @@ function GamePageInner() {
     fetchBasestationsAfterAction();
   }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
 
-  const handleDisable = useCallback(async (rappId: number) => {
-    if (!sessionCode || !token) return;
-    try {
-      await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, undefined, token);
-      addToast('rApp disabled', 'info');
-      fetchBasestationsAfterAction();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to disable rApp', 'error');
-    }
-  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
-
-  const handleRollback = useCallback(async (rappId: number) => {
-    if (!sessionCode || !token) return;
-    try {
-      await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, undefined, token);
-      addToast('rApp rolled back to previous version', 'success');
-      fetchBasestationsAfterAction();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to rollback rApp', 'error');
-    }
-  }, [sessionCode, token, addToast, fetchBasestationsAfterAction]);
-
-  const mergedBasestations = useMemo(() => basestations.map((bs) => {
-    const rtState = realTimeState.basestations.find((rt) => rt.id === bs.id);
-    const activeRapps = realTimeState.rappDeployments.filter(
-      (r) => r.basestationId === bs.id && r.newStatus === 'ACTIVE',
-    );
-    const restActiveCount = bs.deployedRapps.filter((r) => r.status === 'ACTIVE').length;
-    const restDeploymentIds = new Set(bs.deployedRapps.map((r) => r.id));
-    const newRtDeployments = activeRapps.filter((r) => !restDeploymentIds.has(r.deploymentId));
-    const totalActiveRapps = restActiveCount + newRtDeployments.length;
-
-    const severityOrder: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-    const allSeverities = [
-      ...bs.activeEvents.map((e) => e.severity),
-      ...realTimeState.events.filter((e) => e.basestationId === bs.id).map((e) => e.severity),
-    ];
-    const highestSeverity = allSeverities.length > 0
-      ? allSeverities.reduce((highest, current) =>
-          (severityOrder[current] || 0) > (severityOrder[highest] || 0) ? current : highest,
-        ) as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-      : undefined;
-
-    const highestEscalation = bs.activeEvents.length > 0
-      ? Math.max(...bs.activeEvents.map((e) => e.escalationLevel))
-      : 0;
-
-    return {
-      ...bs,
-      metrics: rtState ? rtState.metrics : bs.metrics,
-      activeRappsCount: totalActiveRapps,
-      hasEvent: bs.activeEvents.length > 0 || realTimeState.events.some((e) => e.basestationId === bs.id),
-      highestSeverity,
-      highestEscalation,
-      showResolution: resolvedBasestationIds.has(bs.id),
-    };
-  }), [basestations, realTimeState.basestations, realTimeState.rappDeployments, realTimeState.events, resolvedBasestationIds]);
+  const handleEventClick = useCallback((basestationName: string) => {
+    const bs = basestations.find(b => b.name === basestationName);
+    if (!bs) return;
+    
+    // Trigger the same flow as clicking the basestation on the map
+    // by calling onSelectBasestation with the basestation ID
+    // The GameMap will calculate the proper screen position
+    // For now, we'll use a rough approximation based on world position
+    
+    // Calculate basestation position using isometric projection
+    const COLS = 60;
+    const ROWS = 60;
+    const WORLD_SIZE = 600;
+    const CELL = WORLD_SIZE / COLS;
+    const TW = 18;
+    const TH = 9;
+    
+    const gc = Math.min(COLS - 1, Math.max(0, Math.floor(bs.positionX / CELL)));
+    const gr = Math.min(ROWS - 1, Math.max(0, Math.floor(bs.positionY / CELL)));
+    
+    // Get map container dimensions
+    const mapElements = document.querySelectorAll('canvas');
+    const canvas = Array.from(mapElements).find(c => c.width > 100); // Find the game map canvas
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    
+    // Calculate isometric position with default camera
+    const ox = 0;
+    const oy = -(ROWS * TH) / 4;
+    const isoX = ox + (gc - gr) * (TW / 2);
+    const isoY = oy + (gc + gr) * (TH / 2);
+    
+    // Apply default zoom and center transform
+    const zoom = 2.0;
+    const screenX = rect.left + rect.width / 2 + isoX * zoom;
+    const screenY = rect.top + rect.height / 2 + isoY * zoom - 62 * zoom; // Offset for tower top
+    
+    setSelectedBasestationData({
+      basestation: bs,
+      anchor: { x: screenX, y: screenY }
+    });
+  }, [basestations]);
 
   const combinedActiveEvents: ActiveEvent[] = useMemo(() => {
     const restEvents: ActiveEvent[] = basestations.flatMap((bs) =>
@@ -419,6 +379,18 @@ function GamePageInner() {
 
         <div className="flex-1" />
 
+        {/* Money display */}
+        {gameState === 'active' && playerId && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-surface-light border-surface-lighter">
+            <span className="text-xs font-bold text-primary">€</span>
+            <span className="text-xs font-bold tabular-nums text-primary">
+              {realTimeState.leaderboard
+                .find((entry) => entry.playerId === playerId)
+                ?.scores.money.toLocaleString() ?? '0'}
+            </span>
+          </div>
+        )}
+
         {/* Game timer */}
         {gameState === 'active' && (
           <GameTimer
@@ -463,37 +435,66 @@ function GamePageInner() {
             <LegendDot color="bg-red-500" label="Critical" />
           </div>
 
-          <Suspense fallback={<BasestationsSkeleton />}>
-            <IsometricMap
-              basestations={mergedBasestations}
-              selectedBasestationId={selectedBasestationId}
-              onSelectBasestation={handleSelectBasestation}
-              onDrop={isDeploying ? undefined : handleDrop}
-              onScreenPositionUpdate={handleScreenPositionUpdate}
+          {/* City map */}
+          <div className="absolute inset-0">
+            <GameMap
+              basestations={basestations}
+              dragState={dragState}
+              onDropDeploy={(templateId, basestationId) => {
+                handleConfirmDeploy(templateId, basestationId);
+              }}
+              onSelectBasestation={(id, sx, sy) => {
+                const bs = basestations.find(b => b.id === id);
+                if (bs) {
+                  // Single atomic state update to prevent flash
+                  setSelectedBasestationData({
+                    basestation: bs,
+                    anchor: { x: sx, y: sy }
+                  });
+                }
+              }}
             />
-          </Suspense>
-          {basestationsLoading && <BasestationsSkeleton />}
+          </div>
 
-          {selectedBasestation && popoverAnchor && (
+          {/* Basestation popover */}
+          {selectedBasestationData && (
             <BasestationPopover
-              basestation={selectedBasestation}
-              anchorPosition={popoverAnchor}
-              onClose={() => setSelectedBasestationId(null)}
-              onTune={handleTune}
-              onDisable={handleDisable}
-              onRollback={handleRollback}
+              basestation={selectedBasestationData.basestation}
+              anchorPosition={selectedBasestationData.anchor}
+              onClose={() => { setSelectedBasestationData(null); }}
+              onTune={(rappId, rappName, threshold, aggressiveness) => {
+                setTuneTarget({ id: rappId, name: rappName, threshold, aggressiveness });
+                setTuneModalOpen(true);
+              }}
+              onDisable={async (rappId) => {
+                try {
+                  await apiPost(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, {}, token ?? undefined);
+                  addToast('rApp disabled', 'success');
+                } catch {
+                  addToast('Failed to disable rApp', 'error');
+                }
+              }}
+              onRollback={async (rappId) => {
+                try {
+                  await apiPost(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, {}, token ?? undefined);
+                  addToast('rApp rolled back', 'success');
+                } catch {
+                  addToast('Failed to rollback rApp', 'error');
+                }
+              }}
             />
           )}
+          {basestationsLoading && <BasestationsSkeleton />}
         </div>
 
         {/* Right panel — Active Events */}
-        <div className="hidden md:flex w-64 bg-surface border-l border-surface-lighter flex-col shrink-0">
+        <div className="hidden md:flex w-80 bg-surface border-l border-surface-lighter flex-col shrink-0">
           <div className="flex-1 overflow-y-auto p-3">
             <div className="relative">
               {showResolutionCelebration && (
                 <Confetti duration={2000} particleCount={80} contained />
               )}
-              <MemoizedEventPanel events={combinedActiveEvents} />
+              <MemoizedEventPanel events={combinedActiveEvents} onEventClick={handleEventClick} />
             </div>
           </div>
         </div>
@@ -532,7 +533,7 @@ function GamePageInner() {
           title="Events"
           badge={combinedActiveEvents.length > 0 ? combinedActiveEvents.length : undefined}
         >
-          <MemoizedEventPanel events={combinedActiveEvents} />
+          <MemoizedEventPanel events={combinedActiveEvents} onEventClick={handleEventClick} />
         </ExpandableSection>
         <ExpandableSection title="Leaderboard">
           {realTimeState.leaderboard.length === 0

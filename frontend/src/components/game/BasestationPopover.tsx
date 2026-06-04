@@ -13,7 +13,7 @@ export interface BasestationPopoverProps {
   onRollback: (rappId: number) => void;
 }
 
-const RIGHT_PANEL_WIDTH = 224; // w-56 = 14rem = 224px (scoreboard panel)
+const RIGHT_PANEL_WIDTH = 320; // w-80 = 20rem = 320px (events panel)
 const POPOVER_WIDTH = 320;
 const POPOVER_OFFSET_X = 60;
 const POPOVER_OFFSET_Y = -40;
@@ -127,7 +127,7 @@ export function BasestationPopover({
   onRollback,
 }: BasestationPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
   // Recalculate position when anchor changes (throttled via anchorPosition prop updates)
   useEffect(() => {
@@ -187,10 +187,12 @@ export function BasestationPopover({
       data-testid="basestation-popover"
       className="absolute z-30 bg-surface border border-surface-lighter rounded-lg shadow-xl flex flex-col"
       style={{
-        left: position.left,
-        top: position.top,
+        left: position?.left ?? 0,
+        top: position?.top ?? 0,
         width: POPOVER_WIDTH,
         maxHeight: 'min(80vh, 600px)',
+        opacity: position ? 1 : 0,
+        pointerEvents: position ? 'auto' : 'none',
       }}
       role="dialog"
       aria-label={`${basestation.name} details`}

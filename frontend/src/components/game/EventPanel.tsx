@@ -16,6 +16,7 @@ export interface ActiveEvent {
 
 interface EventPanelProps {
   events: ActiveEvent[];
+  onEventClick?: (basestationName: string) => void;
 }
 
 // --- Constants ---
@@ -102,7 +103,7 @@ function EscalationDots({ level }: { level: number }) {
   );
 }
 
-function EventCard({ event }: { event: ActiveEvent }) {
+function EventCard({ event, onClick }: { event: ActiveEvent; onClick?: () => void }) {
   const Icon = EVENT_TYPE_ICONS[event.eventType] || AlertTriangle;
   const colours = SEVERITY_COLOURS[event.severity] || SEVERITY_COLOURS.LOW;
   const [relativeTime, setRelativeTime] = useState(() => formatRelativeTime(event.createdAt));
@@ -123,7 +124,10 @@ function EventCard({ event }: { event: ActiveEvent }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className={`rounded-lg border border-surface-lighter p-3 ${colours.bg}`}
+      onClick={onClick}
+      className={`rounded-lg border border-surface-lighter p-3 ${colours.bg} ${
+        onClick ? 'cursor-pointer hover:border-primary/30 transition-colors' : ''
+      }`}
     >
       <div className="flex items-start gap-3">
         {/* Event type icon */}
@@ -176,7 +180,7 @@ function EventCard({ event }: { event: ActiveEvent }) {
 // NOTE: If the event list grows significantly (50+ items), consider adding
 // list virtualisation (e.g., @tanstack/react-virtual) for better scroll performance.
 
-export function EventPanel({ events }: EventPanelProps) {
+export function EventPanel({ events, onEventClick }: EventPanelProps) {
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
       const aOrder = SEVERITY_ORDER[a.severity] ?? 4;
@@ -208,7 +212,11 @@ export function EventPanel({ events }: EventPanelProps) {
 
       <AnimatePresence mode="popLayout">
         {sortedEvents.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard
+            key={event.id}
+            event={event}
+            onClick={onEventClick ? () => onEventClick(event.basestationName) : undefined}
+          />
         ))}
       </AnimatePresence>
     </div>
