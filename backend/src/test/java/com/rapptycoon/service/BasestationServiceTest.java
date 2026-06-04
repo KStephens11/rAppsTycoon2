@@ -4,10 +4,7 @@ import com.rapptycoon.config.GameProperties;
 import com.rapptycoon.dto.BasestationStateDto;
 import com.rapptycoon.model.*;
 import com.rapptycoon.repository.BasestationRepository;
-import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
-import com.rapptycoon.repository.RappDeploymentRepository;
-import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +23,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,29 +35,19 @@ class BasestationServiceTest {
     private PlayerRepository playerRepository;
 
     @Mock
-    private RappDeploymentRepository rappDeploymentRepository;
-
-    @Mock
-    private GameEventRepository gameEventRepository;
-
-    @Mock
-    private RappTemplateRepository rappTemplateRepository;
-
-    private GameProperties gameProperties;
+    private BasestationStateMapper basestationStateMapper;
 
     private BasestationService basestationService;
 
     @BeforeEach
     void setUp() {
-        gameProperties = new GameProperties();
+        GameProperties gameProperties = new GameProperties();
         gameProperties.getBasestations().setPerPlayer(3);
 
         basestationService = new BasestationService(
                 basestationRepository,
                 playerRepository,
-                rappDeploymentRepository,
-                gameEventRepository,
-                rappTemplateRepository,
+                basestationStateMapper,
                 gameProperties
         );
     }
@@ -132,8 +117,8 @@ class BasestationServiceTest {
     class GetPlayerBasestations {
 
         @Test
-        @DisplayName("returns state with deployed rApps and active events")
-        void returnsStateWithRappsAndEvents() {
+        @DisplayName("delegates to basestationStateMapper and returns results")
+        void delegatesToMapper() {
             Basestation bs = Basestation.builder()
                     .id(1L)
                     .playerId(5L)
@@ -148,51 +133,30 @@ class BasestationServiceTest {
                     .slaCompliance(new BigDecimal("88.00"))
                     .build();
 
-            RappDeployment deployment = RappDeployment.builder()
-                    .id(10L)
-                    .templateId(3L)
-                    .basestationId(1L)
-                    .playerId(5L)
-                    .status(DeploymentStatus.ACTIVE)
-                    .version(1)
-                    .deployedAt(LocalDateTime.of(2025, 1, 15, 10, 0))
-                    .build();
-
-            GameEvent event = GameEvent.builder()
-                    .id(20L)
-                    .sessionId(1L)
-                    .basestationId(1L)
-                    .eventType("POWER_OUTAGE")
-                    .severity(EventSeverity.HIGH)
-                    .description("Power failure")
-                    .escalationLevel(1)
-                    .createdAt(LocalDateTime.of(2025, 1, 15, 10, 5))
-                    .resolved(false)
-                    .build();
+            BasestationStateDto expectedDto = new BasestationStateDto(
+                    1L, "BS-Alpha", 100, 200,
+                    new com.rapptycoon.dto.MetricsDto(
+                            new BigDecimal("85.00"), new BigDecimal("90.00"),
+                            new BigDecimal("50.00"), new BigDecimal("75.00"),
+                            new BigDecimal("95.00"), new BigDecimal("88.00")),
+                    List.of(), List.of());
 
             when(basestationRepository.findByPlayerId(5L)).thenReturn(List.of(bs));
-            when(rappDeploymentRepository.findByBasestationId(1L)).thenReturn(List.of(deployment));
-            when(gameEventRepository.findByBasestationIdAndResolvedFalse(1L)).thenReturn(List.of(event));
+            when(basestationStateMapper.toStateDtos(List.of(bs))).thenReturn(List.of(expectedDto));
 
             List<BasestationStateDto> result = basestationService.getPlayerBasestations(5L);
 
             assertThat(result).hasSize(1);
-            BasestationStateDto state = result.get(0);
-            assertThat(state.id()).isEqualTo(1L);
-            assertThat(state.name()).isEqualTo("BS-Alpha");
-            assertThat(state.metrics().health()).isEqualByComparingTo(new BigDecimal("85.00"));
-            assertThat(state.deployedRapps()).hasSize(1);
-            assertThat(state.deployedRapps().get(0).templateId()).isEqualTo(3L);
-            assertThat(state.deployedRapps().get(0).status()).isEqualTo("ACTIVE");
-            assertThat(state.activeEvents()).hasSize(1);
-            assertThat(state.activeEvents().get(0).eventType()).isEqualTo("POWER_OUTAGE");
-            assertThat(state.activeEvents().get(0).escalationLevel()).isEqualTo(1);
+            assertThat(result.get(0).id()).isEqualTo(1L);
+            assertThat(result.get(0).name()).isEqualTo("BS-Alpha");
+            verify(basestationStateMapper).toStateDtos(List.of(bs));
         }
 
         @Test
         @DisplayName("returns empty list when player has no basestations")
         void returnsEmptyForNoBasestations() {
             when(basestationRepository.findByPlayerId(99L)).thenReturn(Collections.emptyList());
+            when(basestationStateMapper.toStateDtos(Collections.emptyList())).thenReturn(Collections.emptyList());
 
             List<BasestationStateDto> result = basestationService.getPlayerBasestations(99L);
 

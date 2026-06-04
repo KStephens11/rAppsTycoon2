@@ -33,7 +33,7 @@ public class BotManagerImpl implements BotManager {
     private static final int POD_STARTUP_TIMEOUT_SECONDS = 30;
 
     /**
-     * Sanitizes a value for safe logging by replacing newlines and control characters.
+     * Sanitizes a value for safe logging by replacing CR, LF, and TAB characters.
      * Prevents log injection (Sonar javasecurity:S5145).
      */
     private static String sanitize(String value) {
@@ -64,7 +64,7 @@ public class BotManagerImpl implements BotManager {
         if (!kubernetesEnabled) {
             log.info("Kubernetes bot provisioning is disabled (rapptycoon.bot.kubernetes.enabled=false). " +
                      "Bots for session {} will not be provisioned as pods. " +
-                     "Run bot-player manually or use 'docker compose --profile bot run bot-player'.", sessionCode);
+                     "Run bot-player manually or use 'docker compose --profile bot run bot-player'.", sanitize(sessionCode));
             return;
         }
 
@@ -78,18 +78,18 @@ public class BotManagerImpl implements BotManager {
                 .toList();
 
         if (botPlayers.isEmpty()) {
-            log.info("No bot players found for session {}, skipping pod provisioning", sessionCode);
+            log.info("No bot players found for session {}, skipping pod provisioning", sanitize(sessionCode));
             return;
         }
 
-        log.info("Provisioning {} bot pod(s) for session {}", botPlayers.size(), sessionCode);
+        log.info("Provisioning {} bot pod(s) for session {}", botPlayers.size(), sanitize(sessionCode));
 
         for (Player bot : botPlayers) {
             try {
                 createBotPod(sessionCode, bot);
             } catch (Exception e) {
                 log.error("Failed to create pod for bot '{}' in session {}: {}",
-                        sanitize(bot.getDisplayName()), sessionCode, e.getMessage(), e);
+                        sanitize(bot.getDisplayName()), sanitize(sessionCode), sanitize(e.getMessage()), e);
                 // Log and continue — game proceeds without this bot
             }
         }
@@ -101,7 +101,7 @@ public class BotManagerImpl implements BotManager {
             return;
         }
 
-        log.info("Cleaning up bot pods for session {}", sessionCode);
+        log.info("Cleaning up bot pods for session {}", sanitize(sessionCode));
 
         try {
             Map<String, String> labelSelector = Map.of(
@@ -114,10 +114,10 @@ public class BotManagerImpl implements BotManager {
                     .withLabels(labelSelector)
                     .delete();
 
-            log.info("Successfully deleted bot pods for session {}", sessionCode);
+            log.info("Successfully deleted bot pods for session {}", sanitize(sessionCode));
         } catch (Exception e) {
             log.error("Failed to cleanup bot pods for session {}: {}",
-                    sessionCode, e.getMessage(), e);
+                    sanitize(sessionCode), sanitize(e.getMessage()), e);
         }
     }
 
@@ -172,7 +172,7 @@ public class BotManagerImpl implements BotManager {
                 .build();
 
         log.info("Creating bot pod '{}' for bot '{}' in session {}",
-                podName, sanitize(bot.getDisplayName()), sessionCode);
+                sanitize(podName), sanitize(bot.getDisplayName()), sanitize(sessionCode));
 
         kubernetesClient.pods()
                 .inNamespace(BOT_NAMESPACE)
@@ -186,10 +186,10 @@ public class BotManagerImpl implements BotManager {
                     .withName(podName)
                     .waitUntilReady(POD_STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            log.info("Bot pod '{}' is ready for session {}", podName, sessionCode);
+            log.info("Bot pod '{}' is ready for session {}", sanitize(podName), sanitize(sessionCode));
         } catch (Exception e) {
             log.warn("Bot pod '{}' did not become ready within {} seconds for session {}. Continuing without it.",
-                    podName, POD_STARTUP_TIMEOUT_SECONDS, sessionCode);
+                    sanitize(podName), POD_STARTUP_TIMEOUT_SECONDS, sanitize(sessionCode));
         }
     }
 
