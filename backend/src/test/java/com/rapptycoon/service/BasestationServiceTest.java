@@ -5,7 +5,6 @@ import com.rapptycoon.dto.BasestationStateDto;
 import com.rapptycoon.model.*;
 import com.rapptycoon.repository.BasestationRepository;
 import com.rapptycoon.repository.PlayerRepository;
-import com.rapptycoon.repository.RappDeploymentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,24 +35,18 @@ class BasestationServiceTest {
     private PlayerRepository playerRepository;
 
     @Mock
-    private RappDeploymentRepository rappDeploymentRepository;
-
-    @Mock
     private BasestationStateMapper basestationStateMapper;
-
-    private GameProperties gameProperties;
 
     private BasestationService basestationService;
 
     @BeforeEach
     void setUp() {
-        gameProperties = new GameProperties();
+        GameProperties gameProperties = new GameProperties();
         gameProperties.getBasestations().setPerPlayer(3);
 
         basestationService = new BasestationService(
                 basestationRepository,
                 playerRepository,
-                rappDeploymentRepository,
                 basestationStateMapper,
                 gameProperties
         );

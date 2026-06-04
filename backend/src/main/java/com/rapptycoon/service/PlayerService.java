@@ -1,10 +1,6 @@
 package com.rapptycoon.service;
 
-import com.rapptycoon.dto.BasestationStateDto;
-import com.rapptycoon.dto.PlayerDto;
-import com.rapptycoon.dto.ReconnectResponse;
 import com.rapptycoon.exception.UnauthorizedException;
-import com.rapptycoon.model.Basestation;
 import com.rapptycoon.model.Player;
 import com.rapptycoon.repository.BasestationRepository;
 import com.rapptycoon.repository.PlayerRepository;
@@ -13,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.util.List;
 
 @Service
 public class PlayerService {
@@ -21,16 +16,12 @@ public class PlayerService {
     private static final int TOKEN_LENGTH = 64;
 
     private final PlayerRepository playerRepository;
-    private final BasestationRepository basestationRepository;
-    private final BasestationStateMapper basestationStateMapper;
     private final SecureRandom secureRandom;
 
     public PlayerService(PlayerRepository playerRepository,
                          BasestationRepository basestationRepository,
                          BasestationStateMapper basestationStateMapper) {
         this.playerRepository = playerRepository;
-        this.basestationRepository = basestationRepository;
-        this.basestationStateMapper = basestationStateMapper;
         this.secureRandom = new SecureRandom();
     }
 
@@ -72,40 +63,4 @@ public class PlayerService {
         return playerRepository.save(player);
     }
 
-    /**
-     * Reconnects a player using their session token and restores full game state.
-     * @param token the session token
-     * @return ReconnectResponse containing player info and full basestation state
-     * @throws UnauthorizedException if the token is invalid
-     */
-    @Transactional
-    public ReconnectResponse reconnect(String token) {
-        Player player = validateToken(token);
-        player.setConnected(true);
-        player = playerRepository.save(player);
-
-        List<Basestation> basestations = basestationRepository.findByPlayerId(player.getId());
-        List<BasestationStateDto> basestationStates = basestationStateMapper.toStateDtos(basestations);
-
-        PlayerDto playerDto = new PlayerDto(
-                player.getId(),
-                player.getDisplayName(),
-                player.getSessionToken(),
-                false, // isHost is not determined here; caller can set if needed
-                player.isConnected(),
-                player.isBot()
-        );
-
-        return new ReconnectResponse(playerDto, basestationStates);
-    }
-
-    /**
-     * Returns all players in a given session.
-     * @param sessionId the session ID
-     * @return list of players in the session
-     */
-    @Transactional(readOnly = true)
-    public List<Player> getPlayersBySession(Long sessionId) {
-        return playerRepository.findBySessionId(sessionId);
-    }
 }
