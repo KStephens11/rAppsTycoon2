@@ -11,7 +11,8 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 }
 
 // Stub HTMLCanvasElement.getContext so GameMap's 2D canvas doesn't crash in jsdom
-HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(HTMLCanvasElement.prototype as any).getContext = function (this: HTMLCanvasElement) {
   const noop = () => {};
   const self = this;
   return new Proxy({}, {
@@ -35,7 +36,7 @@ HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
     },
     set() { return true; },
   });
-} as any;
+};
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', async () => {
