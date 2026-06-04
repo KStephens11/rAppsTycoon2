@@ -129,7 +129,7 @@ function GamePageInner() {
   const shouldCelebrateResolutionRef = useRef(false); // Track if we should celebrate event resolution
 
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'success') => {
-    const id = crypto.randomUUID();
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     setToasts((prev) => [...prev, { id, message, type }]);
   }, []);
 

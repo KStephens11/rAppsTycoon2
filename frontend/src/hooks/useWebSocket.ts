@@ -19,9 +19,15 @@ function getWsUrl(): string {
   const envWsUrl = import.meta.env.VITE_WS_URL;
   if (envWsUrl) return envWsUrl;
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  const wsUrl = apiUrl.replace(/^http/, 'ws');
-  return `${wsUrl}/ws/game/websocket`;
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    const wsUrl = apiUrl.replace(/^http/, 'ws');
+    return `${wsUrl}/ws/game/websocket`;
+  }
+
+  // Derive from current browser location so it works from any machine
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/ws/game/websocket`;
 }
 
 const INITIAL_RECONNECT_DELAY = 1000;

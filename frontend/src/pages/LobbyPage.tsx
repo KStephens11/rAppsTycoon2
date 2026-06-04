@@ -49,7 +49,7 @@ export function LobbyPage() {
   const navigate = useNavigate();
 
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
-    const id = crypto.randomUUID();
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     setToasts((prev) => [...prev, { id, message, type }]);
   }, []);
 

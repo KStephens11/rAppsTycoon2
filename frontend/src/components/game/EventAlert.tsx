@@ -172,7 +172,7 @@ export function useEventAlerts() {
   const [alerts, setAlerts] = useState<EventAlertData[]>([]);
 
   const addEventAlert = useCallback((event: GameEvent) => {
-    const id = crypto.randomUUID();
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     setAlerts((prev) => [...prev, { id, event, createdAt: Date.now() }]);
   }, []);
 
