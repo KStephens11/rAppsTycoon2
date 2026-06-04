@@ -78,8 +78,21 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    bat 'kubectl apply -f k8s/secret.yaml'
+                withCredentials([
+                    file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG'),
+                    string(credentialsId: 'mysql-root-password', variable: 'MYSQL_ROOT_PASSWORD'),
+                    string(credentialsId: 'mysql-password', variable: 'MYSQL_PASSWORD'),
+                    string(credentialsId: 'internal-api-key', variable: 'INTERNAL_API_KEY')
+                ]) {
+                    bat """
+                        kubectl create secret generic rapp-secret ^
+                            --from-literal=MYSQL_ROOT_PASSWORD=%MYSQL_ROOT_PASSWORD% ^
+                            --from-literal=MYSQL_DATABASE=rapptycoon ^
+                            --from-literal=MYSQL_USER=rapptycoon ^
+                            --from-literal=MYSQL_PASSWORD=%MYSQL_PASSWORD% ^
+                            --from-literal=INTERNAL_API_KEY=%INTERNAL_API_KEY% ^
+                            --dry-run=client -o yaml | kubectl apply -f -
+                    """
                     bat 'kubectl apply -f k8s/configmap.yaml'
                     bat 'kubectl apply -f k8s/mysql-pvc.yaml'
                     bat 'kubectl apply -f k8s/mysql-deployment.yaml'
