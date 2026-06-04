@@ -468,7 +468,7 @@ function GamePageInner() {
               }}
               onDisable={async (rappId) => {
                 try {
-                  await apiPost(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, {}, token ?? undefined);
+                  await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, {}, token ?? undefined);
                   addToast('rApp disabled', 'success');
                 } catch {
                   addToast('Failed to disable rApp', 'error');
@@ -476,7 +476,7 @@ function GamePageInner() {
               }}
               onRollback={async (rappId) => {
                 try {
-                  await apiPost(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, {}, token ?? undefined);
+                  await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, {}, token ?? undefined);
                   addToast('rApp rolled back', 'success');
                 } catch {
                   addToast('Failed to rollback rApp', 'error');
