@@ -3,10 +3,7 @@ package com.rapptycoon.service;
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.model.Player;
 import com.rapptycoon.repository.BasestationRepository;
-import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
-import com.rapptycoon.repository.RappDeploymentRepository;
-import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,13 +30,7 @@ class PlayerServiceTest {
     private BasestationRepository basestationRepository;
 
     @Mock
-    private RappDeploymentRepository rappDeploymentRepository;
-
-    @Mock
-    private GameEventRepository gameEventRepository;
-
-    @Mock
-    private RappTemplateRepository rappTemplateRepository;
+    private BasestationStateMapper basestationStateMapper;
 
     private PlayerService playerService;
 
@@ -48,9 +39,7 @@ class PlayerServiceTest {
         playerService = new PlayerService(
                 playerRepository,
                 basestationRepository,
-                rappDeploymentRepository,
-                gameEventRepository,
-                rappTemplateRepository
+                basestationStateMapper
         );
     }
 

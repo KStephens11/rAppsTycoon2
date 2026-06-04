@@ -4,10 +4,7 @@ import com.rapptycoon.config.GameProperties;
 import com.rapptycoon.dto.*;
 import com.rapptycoon.model.*;
 import com.rapptycoon.repository.BasestationRepository;
-import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
-import com.rapptycoon.repository.RappDeploymentRepository;
-import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,22 +27,16 @@ public class BasestationService {
 
     private final BasestationRepository basestationRepository;
     private final PlayerRepository playerRepository;
-    private final RappDeploymentRepository rappDeploymentRepository;
-    private final GameEventRepository gameEventRepository;
-    private final RappTemplateRepository rappTemplateRepository;
+    private final BasestationStateMapper basestationStateMapper;
     private final GameProperties gameProperties;
 
     public BasestationService(BasestationRepository basestationRepository,
                               PlayerRepository playerRepository,
-                              RappDeploymentRepository rappDeploymentRepository,
-                              GameEventRepository gameEventRepository,
-                              RappTemplateRepository rappTemplateRepository,
+                              BasestationStateMapper basestationStateMapper,
                               GameProperties gameProperties) {
         this.basestationRepository = basestationRepository;
         this.playerRepository = playerRepository;
-        this.rappDeploymentRepository = rappDeploymentRepository;
-        this.gameEventRepository = gameEventRepository;
-        this.rappTemplateRepository = rappTemplateRepository;
+        this.basestationStateMapper = basestationStateMapper;
         this.gameProperties = gameProperties;
     }
 
@@ -110,59 +101,7 @@ public class BasestationService {
     @Transactional(readOnly = true)
     public List<BasestationStateDto> getPlayerBasestations(Long playerId) {
         List<Basestation> basestations = basestationRepository.findByPlayerId(playerId);
-
-        return basestations.stream()
-                .map(bs -> {
-                    List<RappDeployment> deployments = rappDeploymentRepository.findByBasestationId(bs.getId());
-                    List<GameEvent> events = gameEventRepository.findByBasestationIdAndResolvedFalse(bs.getId());
-
-                    List<DeployedRappDto> deployedRapps = deployments.stream()
-                            .map(d -> {
-                                String rappName = rappTemplateRepository.findById(d.getTemplateId())
-                                        .map(RappTemplate::getName)
-                                        .orElse("Unknown rApp");
-                                return new DeployedRappDto(
-                                    d.getId(),
-                                    d.getTemplateId(),
-                                    rappName,
-                                    d.getStatus().name(),
-                                    d.getVersion(),
-                                    d.getDeployedAt()
-                                );
-                            })
-                            .toList();
-
-                    List<ActiveEventDto> activeEvents = events.stream()
-                            .map(e -> new ActiveEventDto(
-                                    e.getId(),
-                                    e.getEventType(),
-                                    e.getSeverity().name(),
-                                    e.getDescription(),
-                                    e.getEscalationLevel(),
-                                    e.getCreatedAt()
-                            ))
-                            .toList();
-
-                    MetricsDto metrics = new MetricsDto(
-                            bs.getHealth(),
-                            bs.getCustomerExperience(),
-                            bs.getCost(),
-                            bs.getEnergyEfficiency(),
-                            bs.getAutomationReliability(),
-                            bs.getSlaCompliance()
-                    );
-
-                    return new BasestationStateDto(
-                            bs.getId(),
-                            bs.getName(),
-                            bs.getPositionX(),
-                            bs.getPositionY(),
-                            metrics,
-                            deployedRapps,
-                            activeEvents
-                    );
-                })
-                .toList();
+        return basestationStateMapper.toStateDtos(basestations);
     }
 
     /**

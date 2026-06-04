@@ -1,22 +1,13 @@
 package com.rapptycoon.service;
 
-import com.rapptycoon.dto.ActiveEventDto;
 import com.rapptycoon.dto.BasestationStateDto;
-import com.rapptycoon.dto.DeployedRappDto;
-import com.rapptycoon.dto.MetricsDto;
 import com.rapptycoon.dto.PlayerDto;
 import com.rapptycoon.dto.ReconnectResponse;
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.model.Basestation;
-import com.rapptycoon.model.GameEvent;
 import com.rapptycoon.model.Player;
-import com.rapptycoon.model.RappDeployment;
-import com.rapptycoon.model.RappTemplate;
 import com.rapptycoon.repository.BasestationRepository;
-import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
-import com.rapptycoon.repository.RappDeploymentRepository;
-import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,21 +22,15 @@ public class PlayerService {
 
     private final PlayerRepository playerRepository;
     private final BasestationRepository basestationRepository;
-    private final RappDeploymentRepository rappDeploymentRepository;
-    private final GameEventRepository gameEventRepository;
-    private final RappTemplateRepository rappTemplateRepository;
+    private final BasestationStateMapper basestationStateMapper;
     private final SecureRandom secureRandom;
 
     public PlayerService(PlayerRepository playerRepository,
                          BasestationRepository basestationRepository,
-                         RappDeploymentRepository rappDeploymentRepository,
-                         GameEventRepository gameEventRepository,
-                         RappTemplateRepository rappTemplateRepository) {
+                         BasestationStateMapper basestationStateMapper) {
         this.playerRepository = playerRepository;
         this.basestationRepository = basestationRepository;
-        this.rappDeploymentRepository = rappDeploymentRepository;
-        this.gameEventRepository = gameEventRepository;
-        this.rappTemplateRepository = rappTemplateRepository;
+        this.basestationStateMapper = basestationStateMapper;
         this.secureRandom = new SecureRandom();
     }
 
@@ -100,59 +85,7 @@ public class PlayerService {
         player = playerRepository.save(player);
 
         List<Basestation> basestations = basestationRepository.findByPlayerId(player.getId());
-
-        List<BasestationStateDto> basestationStates = basestations.stream()
-                .map(bs -> {
-                    List<RappDeployment> deployments = rappDeploymentRepository.findByBasestationId(bs.getId());
-                    List<GameEvent> events = gameEventRepository.findByBasestationIdAndResolvedFalse(bs.getId());
-
-                    List<DeployedRappDto> deployedRapps = deployments.stream()
-                            .map(d -> {
-                                String rappName = rappTemplateRepository.findById(d.getTemplateId())
-                                        .map(RappTemplate::getName)
-                                        .orElse("Unknown rApp");
-                                return new DeployedRappDto(
-                                    d.getId(),
-                                    d.getTemplateId(),
-                                    rappName,
-                                    d.getStatus().name(),
-                                    d.getVersion(),
-                                    d.getDeployedAt()
-                                );
-                            })
-                            .toList();
-
-                    List<ActiveEventDto> activeEvents = events.stream()
-                            .map(e -> new ActiveEventDto(
-                                    e.getId(),
-                                    e.getEventType(),
-                                    e.getSeverity().name(),
-                                    e.getDescription(),
-                                    e.getEscalationLevel(),
-                                    e.getCreatedAt()
-                            ))
-                            .toList();
-
-                    MetricsDto metrics = new MetricsDto(
-                            bs.getHealth(),
-                            bs.getCustomerExperience(),
-                            bs.getCost(),
-                            bs.getEnergyEfficiency(),
-                            bs.getAutomationReliability(),
-                            bs.getSlaCompliance()
-                    );
-
-                    return new BasestationStateDto(
-                            bs.getId(),
-                            bs.getName(),
-                            bs.getPositionX(),
-                            bs.getPositionY(),
-                            metrics,
-                            deployedRapps,
-                            activeEvents
-                    );
-                })
-                .toList();
+        List<BasestationStateDto> basestationStates = basestationStateMapper.toStateDtos(basestations);
 
         PlayerDto playerDto = new PlayerDto(
                 player.getId(),
