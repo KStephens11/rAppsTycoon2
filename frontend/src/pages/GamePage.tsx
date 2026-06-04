@@ -13,6 +13,7 @@ import { BasestationPopover } from '../components/game/BasestationPopover';
 import { ToastContainer, type ToastMessage } from '../components/ui';
 import { EventAlertContainer, useEventAlerts } from '../components/game/EventAlert';
 import { EventPanel, type ActiveEvent } from '../components/game/EventPanel';
+import { RecommendationBubble } from '../components/game/RecommendationBubble';
 import { Leaderboard } from '../components/game/Leaderboard';
 import { GameTimer } from '../components/game/GameTimer';
 import { SettingsToolbar } from '../components/ui/SettingsToolbar';
@@ -438,6 +439,19 @@ function GamePageInner() {
             <LegendDot color="bg-amber-400" label="Warning" />
             <LegendDot color="bg-red-500" label="Critical" />
           </div>
+
+          {/* Byte's recommendation bubble */}
+          {gameState === 'active' && sessionCode && token && (
+            <RecommendationBubble
+              sessionCode={sessionCode}
+              token={token}
+              activeEvents={combinedActiveEvents.map(e => ({
+                eventType: e.eventType,
+                severity: e.severity,
+                basestationName: e.basestationName,
+              }))}
+            />
+          )}
 
           {/* City map */}
           <div className="absolute inset-0">
