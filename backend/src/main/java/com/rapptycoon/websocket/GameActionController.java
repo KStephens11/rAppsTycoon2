@@ -44,7 +44,8 @@ public class GameActionController {
                              SimpMessageHeaderAccessor headerAccessor) {
         Long playerId = (Long) headerAccessor.getSessionAttributes().get(WebSocketAuthInterceptor.PLAYER_ID_ATTR);
         if (playerId == null) {
-            log.warn("Action received without authenticated player for session {}", code);
+            String sanitizedCode = code != null ? code.replaceAll("[\n\r]", "_") : "null";
+            log.warn("Action received without authenticated player for session {}", sanitizedCode);
             return;
         }
 
@@ -72,8 +73,11 @@ public class GameActionController {
                         "Unknown action: " + action);
             }
         } catch (Exception e) {
+            String sanitizedAction = action.replaceAll("[\n\r]", "_");
+            String sanitizedCode = code != null ? code.replaceAll("[\n\r]", "_") : "null";
+            String sanitizedMessage = e.getMessage() != null ? e.getMessage().replaceAll("[\n\r]", "_") : "null";
             log.error("Error handling action {} for player {} in session {}: {}",
-                    action, playerId, code, e.getMessage());
+                    sanitizedAction, playerId, sanitizedCode, sanitizedMessage);
             sendActionError(code, playerId, "VALIDATION_ERROR", e.getMessage());
         }
     }
