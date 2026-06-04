@@ -116,9 +116,13 @@ function GamePageInner() {
   const [, setResolvedBasestationIds] = useState<Set<number>>(new Set());
   const [showResolutionCelebration, setShowResolutionCelebration] = useState(false);
   const [selectedBasestationData, setSelectedBasestationData] = useState<{
-    basestation: BasestationApiData;
+    basestationId: number;
     anchor: { x: number; y: number };
   } | null>(null);
+  // Derive the live basestation from the current basestations array so the popover auto-refreshes
+  const selectedBasestation = selectedBasestationData
+    ? basestations.find(b => b.id === selectedBasestationData.basestationId) ?? null
+    : null;
   const postActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousEventIdsRef = useRef<Map<number, Set<number>>>(new Map());
   const shouldCelebrateResolutionRef = useRef(false); // Track if we should celebrate event resolution
@@ -323,7 +327,7 @@ function GamePageInner() {
     const screenY = rect.top + rect.height / 2 + isoY * zoom - 62 * zoom; // Offset for tower top
     
     setSelectedBasestationData({
-      basestation: bs,
+      basestationId: bs.id,
       anchor: { x: screenX, y: screenY }
     });
   }, [basestations]);
@@ -448,7 +452,7 @@ function GamePageInner() {
                 if (bs) {
                   // Single atomic state update to prevent flash
                   setSelectedBasestationData({
-                    basestation: bs,
+                    basestationId: bs.id,
                     anchor: { x: sx, y: sy }
                   });
                 }
@@ -457,9 +461,9 @@ function GamePageInner() {
           </div>
 
           {/* Basestation popover */}
-          {selectedBasestationData && (
+          {selectedBasestationData && selectedBasestation && (
             <BasestationPopover
-              basestation={selectedBasestationData.basestation}
+              basestation={selectedBasestation}
               anchorPosition={selectedBasestationData.anchor}
               onClose={() => { setSelectedBasestationData(null); }}
               onTune={(rappId, rappName, threshold, aggressiveness) => {
@@ -470,6 +474,7 @@ function GamePageInner() {
                 try {
                   await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/disable`, {}, token ?? undefined);
                   addToast('rApp disabled', 'success');
+                  fetchBasestationsAfterAction();
                 } catch {
                   addToast('Failed to disable rApp', 'error');
                 }
@@ -478,6 +483,7 @@ function GamePageInner() {
                 try {
                   await apiPut(`/api/sessions/${sessionCode}/rapps/${rappId}/rollback`, {}, token ?? undefined);
                   addToast('rApp rolled back', 'success');
+                  fetchBasestationsAfterAction();
                 } catch {
                   addToast('Failed to rollback rApp', 'error');
                 }
