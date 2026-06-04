@@ -18,7 +18,7 @@ services:
     container_name: rapp-backend
     env_file: .env
     ports:
-      - "8080:8080"
+      - "0.0.0.0:8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
@@ -50,7 +50,7 @@ services:
     build: ./frontend
     container_name: rapp-frontend
     ports:
-      - "3001:80"
+      - "0.0.0.0:3001:80"
     depends_on:
       - backend
 

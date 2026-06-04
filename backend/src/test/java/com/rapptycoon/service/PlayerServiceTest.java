@@ -3,6 +3,8 @@ package com.rapptycoon.service;
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.model.Player;
 import com.rapptycoon.repository.PlayerRepository;
+import com.rapptycoon.repository.RappDeploymentRepository;
+import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,11 +27,52 @@ class PlayerServiceTest {
     @Mock
     private PlayerRepository playerRepository;
 
+    @Mock
+    private BasestationRepository basestationRepository;
+
+    @Mock
+    private RappDeploymentRepository rappDeploymentRepository;
+
+    @Mock
+    private GameEventRepository gameEventRepository;
+
+    @Mock
+    private RappTemplateRepository rappTemplateRepository;
+
     private PlayerService playerService;
 
     @BeforeEach
     void setUp() {
-        playerService = new PlayerService(playerRepository);
+        playerService = new PlayerService(
+                playerRepository,
+                basestationRepository,
+                rappDeploymentRepository,
+                gameEventRepository,
+                rappTemplateRepository
+        );
+    }
+
+    @Nested
+    @DisplayName("generateToken")
+    class GenerateToken {
+
+        @Test
+        @DisplayName("generates a 64-character hex string")
+        void generates64CharHexString() {
+            String token = playerService.generateToken();
+
+            assertThat(token).hasSize(64);
+            assertThat(token).matches("[0-9a-f]{64}");
+        }
+
+        @Test
+        @DisplayName("generates unique tokens on successive calls")
+        void generatesUniqueTokens() {
+            String token1 = playerService.generateToken();
+            String token2 = playerService.generateToken();
+
+            assertThat(token1).isNotEqualTo(token2);
+        }
     }
 
     @Nested

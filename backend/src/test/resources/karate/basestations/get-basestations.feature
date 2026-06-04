@@ -7,7 +7,7 @@ Feature: Get Player Basestations - GET /api/sessions/{code}/basestations
   # Happy path
   # -----------------------------------------------------------------------
 
-  Scenario: Returns 3 basestations per player with metrics and empty rApps
+  Scenario: Returns 4 basestations per player with metrics and empty rApps
     * call read('classpath:karate/helpers/setup.feature@startGame')
     Given path '/api/sessions/' + sessionCode + '/basestations'
     And header X-Session-Token = hostToken

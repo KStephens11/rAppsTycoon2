@@ -2,7 +2,13 @@ package com.rapptycoon.service;
 
 import com.rapptycoon.exception.UnauthorizedException;
 import com.rapptycoon.model.Player;
+import com.rapptycoon.model.RappDeployment;
+import com.rapptycoon.model.RappTemplate;
+import com.rapptycoon.repository.BasestationRepository;
+import com.rapptycoon.repository.GameEventRepository;
 import com.rapptycoon.repository.PlayerRepository;
+import com.rapptycoon.repository.RappDeploymentRepository;
+import com.rapptycoon.repository.RappTemplateRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,9 +17,36 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlayerService {
 
     private final PlayerRepository playerRepository;
+    private final BasestationRepository basestationRepository;
+    private final RappDeploymentRepository rappDeploymentRepository;
+    private final GameEventRepository gameEventRepository;
+    private final RappTemplateRepository rappTemplateRepository;
+    private final SecureRandom secureRandom;
 
-    public PlayerService(PlayerRepository playerRepository) {
+    public PlayerService(PlayerRepository playerRepository,
+                         BasestationRepository basestationRepository,
+                         RappDeploymentRepository rappDeploymentRepository,
+                         GameEventRepository gameEventRepository,
+                         RappTemplateRepository rappTemplateRepository) {
         this.playerRepository = playerRepository;
+        this.basestationRepository = basestationRepository;
+        this.rappDeploymentRepository = rappDeploymentRepository;
+        this.gameEventRepository = gameEventRepository;
+        this.rappTemplateRepository = rappTemplateRepository;
+        this.secureRandom = new SecureRandom();
+    }
+
+    /**
+     * Generates a unique 64-character hex session token using SecureRandom.
+     */
+    public String generateToken() {
+        byte[] bytes = new byte[TOKEN_LENGTH / 2];
+        secureRandom.nextBytes(bytes);
+        StringBuilder sb = new StringBuilder(TOKEN_LENGTH);
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 
     /**
@@ -39,5 +72,94 @@ public class PlayerService {
                 .orElseThrow(() -> new EntityNotFoundException("Player not found with id: " + playerId));
         player.setConnected(false);
         return playerRepository.save(player);
+    }
+
+    /**
+     * Reconnects a player using their session token and restores full game state.
+     * @param token the session token
+     * @return ReconnectResponse containing player info and full basestation state
+     * @throws UnauthorizedException if the token is invalid
+     */
+    @Transactional
+    public ReconnectResponse reconnect(String token) {
+        Player player = validateToken(token);
+        player.setConnected(true);
+        player = playerRepository.save(player);
+
+        List<Basestation> basestations = basestationRepository.findByPlayerId(player.getId());
+
+        List<BasestationStateDto> basestationStates = basestations.stream()
+                .map(bs -> {
+                    List<RappDeployment> deployments = rappDeploymentRepository.findByBasestationId(bs.getId());
+                    List<GameEvent> events = gameEventRepository.findByBasestationIdAndResolvedFalse(bs.getId());
+
+                    List<DeployedRappDto> deployedRapps = deployments.stream()
+                            .map(d -> {
+                                String rappName = rappTemplateRepository.findById(d.getTemplateId())
+                                        .map(RappTemplate::getName)
+                                        .orElse("Unknown rApp");
+                                return new DeployedRappDto(
+                                    d.getId(),
+                                    d.getTemplateId(),
+                                    rappName,
+                                    d.getStatus().name(),
+                                    d.getVersion(),
+                                    d.getDeployedAt()
+                                );
+                            })
+                            .toList();
+
+                    List<ActiveEventDto> activeEvents = events.stream()
+                            .map(e -> new ActiveEventDto(
+                                    e.getId(),
+                                    e.getEventType(),
+                                    e.getSeverity().name(),
+                                    e.getDescription(),
+                                    e.getEscalationLevel(),
+                                    e.getCreatedAt()
+                            ))
+                            .toList();
+
+                    MetricsDto metrics = new MetricsDto(
+                            bs.getHealth(),
+                            bs.getCustomerExperience(),
+                            bs.getCost(),
+                            bs.getEnergyEfficiency(),
+                            bs.getAutomationReliability(),
+                            bs.getSlaCompliance()
+                    );
+
+                    return new BasestationStateDto(
+                            bs.getId(),
+                            bs.getName(),
+                            bs.getPositionX(),
+                            bs.getPositionY(),
+                            metrics,
+                            deployedRapps,
+                            activeEvents
+                    );
+                })
+                .toList();
+
+        PlayerDto playerDto = new PlayerDto(
+                player.getId(),
+                player.getDisplayName(),
+                player.getSessionToken(),
+                false, // isHost is not determined here; caller can set if needed
+                player.isConnected(),
+                player.isBot()
+        );
+
+        return new ReconnectResponse(playerDto, basestationStates);
+    }
+
+    /**
+     * Returns all players in a given session.
+     * @param sessionId the session ID
+     * @return list of players in the session
+     */
+    @Transactional(readOnly = true)
+    public List<Player> getPlayersBySession(Long sessionId) {
+        return playerRepository.findBySessionId(sessionId);
     }
 }

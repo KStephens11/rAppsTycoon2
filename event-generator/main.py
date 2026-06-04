@@ -68,6 +68,12 @@ def tick_job():
                 
                 # Get per-player basestation groups (list of lists)
                 bs_by_player = session.get('basestationIdsByPlayer', [])
+                # Get basestation ID → name mapping
+                bs_names = session.get('basestationNames', {})
+                
+                def get_bs_name(bs_id):
+                    """Look up basestation name, fallback to ID-based name."""
+                    return bs_names.get(str(bs_id), bs_names.get(bs_id, f"BS-{bs_id}"))
                 
                 if not bs_by_player or not bs_by_player[0]:
                     # Fallback: old behavior if grouping not available
@@ -76,7 +82,7 @@ def tick_job():
                     
                     event = generate_event(
                         basestation_id,
-                        f"BS-{basestation_id}",
+                        get_bs_name(basestation_id),
                         tick_number,
                         config.tick_total
                     )
@@ -93,11 +99,11 @@ def tick_job():
                     bs_count_per_player = len(bs_by_player[0])
                     bs_index = random.randint(0, bs_count_per_player - 1)
                     
-                    # Generate one event template
+                    # Generate one event template using first player's basestation name
                     first_bs_id = bs_by_player[0][bs_index]
                     event_template = generate_event(
                         first_bs_id,
-                        f"BS-{first_bs_id}",
+                        get_bs_name(first_bs_id),
                         tick_number,
                         config.tick_total
                     )
@@ -106,16 +112,21 @@ def tick_job():
                     for player_bs_list in bs_by_player:
                         if bs_index < len(player_bs_list):
                             target_bs_id = player_bs_list[bs_index]
+                            # Update description with this player's basestation name
+                            target_name = get_bs_name(target_bs_id)
                             event_copy = {
                                 **event_template,
                                 'basestationId': target_bs_id,
+                                'description': event_template['description'].replace(
+                                    get_bs_name(first_bs_id), target_name
+                                ) if first_bs_id != target_bs_id else event_template['description'],
                             }
                             try:
                                 client.push_event(session_code, event_copy)
                                 events_pushed += 1
                                 logger.debug(
                                     f"Pushed {event_copy['eventType']} ({event_copy['severity']}) "
-                                    f"to {session_code}/BS-{target_bs_id}"
+                                    f"to {session_code}/{target_name}"
                                 )
                             except BackendClientError as e:
                                 logger.warning(f"Failed to push event to {session_code}: {e}")

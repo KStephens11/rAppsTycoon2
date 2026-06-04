@@ -94,11 +94,6 @@ vi.mock('../hooks/useSoundEffects', () => ({
   }),
 }));
 
-// Mock the IsometricMap (heavy R3F component)
-vi.mock('../components/game/IsometricMap', () => ({
-  default: () => <div data-testid="isometric-map">IsometricMap</div>,
-}));
-
 import { apiGet } from '../services/api';
 
 const mockCatalogue = {
